@@ -19,32 +19,29 @@ data {
 
 transformed data {
   vector[nObs] logCObs = log(cObs);
-  int nTheta = 5;
-  int nCmt = 3;
+  int nTheta = 3;
+  int nCmt = 2;
   
-  real biovar[nCmt] = {1.0, 1.0, 1.0};
-  real tlag[nCmt] = {0.0, 0.0, 0.0};
+  real biovar[nCmt] = {1.0, 1.0};
+  real tlag[nCmt] = {0.0, 0.0};
 }
 
 parameters {
   real<lower = 0> CL;
-  real<lower = 0> Q;
   real<lower = 0> VC;
-  real<lower = 0> VP;
   real<lower = 0> ka;
   real<lower = 0> sigma;
 }
 
 transformed parameters {
-  real theta[nTheta] = {CL, Q, VC, VP, ka};
+  real theta[nTheta] = {CL, VC, ka};
   row_vector<lower = 0>[nEvent] concentration;
   row_vector<lower = 0>[nObs] concentrationObs;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
-  mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss,
+  mass = pmx_solve_onecpt(time, amt, rate, ii, evid, cmt, addl, ss,
                           theta, biovar, tlag);
-  // mass = PKModelTwoCpt(time, amt, rate, ii, evid, cmt, addl, ss,
-  //                      theta, biovar, tlag);
+
   concentration = mass[2, ] ./ VC;
   concentrationObs = concentration[iObs];
 }
@@ -52,19 +49,15 @@ transformed parameters {
 model {
   // priors
   CL ~ lognormal(log(10), 0.25); 
-  Q ~ lognormal(log(15), 0.5);
   VC ~ lognormal(log(35), 0.25);
-  VP ~ lognormal(log(105), 0.5);
   ka ~ lognormal(log(2.5), 1);
-  sigma ~ cauchy(0, 1);
+  sigma ~ normal(0, 1);
 
   logCObs ~ normal(log(concentrationObs), sigma);
 }
 
 generated quantities {
-  real concentrationObsPred[nObs];
-
-  for (i in 1:nObs) {
-    concentrationObsPred[i] = exp(normal_rng(log(concentrationObs[i]), sigma));
-  }
+  real concentrationObsPred[nObs] 
+    = exp(normal_rng(log(concentrationObs), sigma));
 }
+
