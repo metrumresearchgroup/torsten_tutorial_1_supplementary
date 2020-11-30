@@ -428,6 +428,6 @@ TEST_F(TorstenTwoCptTest, multiple_iv_var_optional_biovar_tlag) {
   auto x3 = torsten::pmx_solve_twocpt(time, amt_var, rate, ii, evid, cmt, addl, ss,
                                       pMatrix);
 
-  torsten::test::test_grad(amt_var, x1, x2, 1.e-12, 1.e-12);
-  torsten::test::test_grad(amt_var, x1, x3, 1.e-12, 1.e-12);
+  torsten::test::test_grad(amt_var, x1, x2, 2.e-12, 1.e-12);
+  torsten::test::test_grad(amt_var, x1, x3, 2.e-12, 1.e-12);
 }

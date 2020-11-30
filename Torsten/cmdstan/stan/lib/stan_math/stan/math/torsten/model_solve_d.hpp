@@ -116,13 +116,16 @@ namespace torsten {
    *    sol value y1, dy1/dp1, dy1/dp2..., sol value y2, dy2/dp2, dy2/dp2...
    *
    * For transient solution. When the solution is @c var
-   * type, we take gradient using autodiff.
+   * type, we take gradient using autodiff. When internal integrator
+   * is not Torsten's own implementation but Stan's, we'll need to take in <code>var</code>
+   * solution and apply autodiff to get data-only solution.
    */
   template<typename T_model, typename T, 
            typename Tt0, typename Tt1,
            typename T1, PMXOdeIntegratorId It,
            typename... Ts,
-           typename std::enable_if_t<It != torsten::PkBdf && It != torsten::PkAdams && It != torsten::PkRk45>* = nullptr>
+           typename std::enable_if_t<torsten::is_var<typename T_model::par_type, Tt0, Tt1, T, T1>::value &&
+                                     It != torsten::PkBdf && It != torsten::PkAdams && It != torsten::PkRk45>* = nullptr>
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
                                 const PKRec<T>& y,
                                 const Tt0& t0, const Tt1& t1,
@@ -161,11 +164,22 @@ namespace torsten {
     return res_d;
   }
 
+  /*
+   * Solve PK models and return the results in form of data,
+   * arrange as
+   *
+   *    sol value y1, dy1/dp1, dy1/dp2..., sol value y2, dy2/dp2, dy2/dp2...
+   *
+   * For transient solution. When the solution is @c var
+   * type, we take gradient using autodiff. Torsten's own internal integrator
+   * implementation can output data-only solution directly.
+   */
   template<typename T_model, typename T, 
            typename Tt0, typename Tt1,
            typename T1, PMXOdeIntegratorId It,
            typename... Ts,
-           typename std::enable_if_t<It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45>* = nullptr>
+           typename std::enable_if_t<torsten::is_var<typename T_model::par_type, Tt0, Tt1, T, T1>::value &&
+                                     (It == torsten::PkBdf || It == torsten::PkAdams || It == torsten::PkRk45)>* = nullptr>
   Eigen::VectorXd model_solve_d(const T_model& pkmodel,
                                 const PKRec<T>& y,
                                 const Tt0& t0, const Tt1& t1,
