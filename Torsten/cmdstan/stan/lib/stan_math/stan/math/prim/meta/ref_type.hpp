@@ -1,10 +1,11 @@
 #ifndef STAN_MATH_PRIM_META_REF_TYPE_HPP
 #define STAN_MATH_PRIM_META_REF_TYPE_HPP
 
+#include <stan/math/prim/fun/Eigen.hpp>
 #include <stan/math/prim/meta/is_eigen.hpp>
+#include <stan/math/prim/meta/is_arena_matrix.hpp>
 #include <stan/math/prim/meta/is_vector.hpp>
 #include <stan/math/prim/meta/plain_type.hpp>
-#include <stan/math/prim/fun/Eigen.hpp>
 
 #include <type_traits>
 
@@ -40,6 +41,12 @@ struct ref_type_if<Condition, T, require_not_eigen_t<T>> {
                                   std::remove_reference_t<T>, const T&>;
 };
 
+template <bool Condition, typename T>
+struct ref_type_if<Condition, T, require_arena_matrix_t<T>> {
+  using type =
+      typename ref_type_if<Condition, typename std::decay_t<T>::Base>::type;
+};
+
 template <typename T>
 using ref_type_t = typename ref_type_if<true, T>::type;
 
@@ -73,12 +80,13 @@ struct ref_type_for_opencl {
       = std::conditional_t<std::is_rvalue_reference<T>::value, T_val, const T&>;
   // Setting Outer stride of Ref to 0 (default) won't actually check that
   // expression has contiguous outer stride. Instead we need to check that
-  // evaluator flags contain LinearAccessBit.
+  // evaluator flags contain LinearAccessBit and PacketAccessBit.
   using type = std::conditional_t<
       Eigen::internal::traits<Eigen::Ref<std::decay_t<T_plain_col_major>>>::
               template match<T_val>::MatchAtCompileTime
+          && (Eigen::internal::evaluator<T_val>::Flags & Eigen::LinearAccessBit)
           && (Eigen::internal::evaluator<T_val>::Flags
-              & Eigen::LinearAccessBit),
+              & Eigen::PacketAccessBit),
       T_optionally_ref, T_plain_col_major>;
 };
 
@@ -86,6 +94,12 @@ template <typename T>
 struct ref_type_for_opencl<T, require_not_eigen_t<T>> {
   using type = std::conditional_t<std::is_rvalue_reference<T>::value,
                                   std::remove_reference_t<T>, const T&>;
+};
+
+template <typename T>
+struct ref_type_for_opencl<T, require_arena_matrix_t<T>> {
+  using type =
+      typename ref_type_for_opencl<typename std::decay_t<T>::Base>::type;
 };
 
 template <typename T>

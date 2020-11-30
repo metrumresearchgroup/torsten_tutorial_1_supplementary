@@ -164,10 +164,23 @@ namespace torsten{
       ev(init, pkmodel, integrator);
     }
 
+    /**
+     * Solve an event from event manager and store the result in both
+     * data format(solution & gradient) and <code>var</code> format.
+     *
+     * @param i id of the event to be solved
+     * @param init <code>var</code> solution
+     * @param sol_d data solution
+     * @param em event manager
+     * @param integrator numerical integrator for ODE
+     * @param scalar_pars params needed to construst the PMX model.
+     */
     template<PMXOdeIntegratorId It, typename... scalar_pars_type>
     void stepper_solve(int i, torsten::PKRec<typename EM::T_scalar>& init,
                        torsten::PKRec<double>& sol_d,
-                       const EM& em, const PMXOdeIntegrator<It> integrator, const scalar_pars_type... scalar_pars) {
+                       const EM& em,
+                       const PMXOdeIntegrator<It> integrator,
+                       const scalar_pars_type... scalar_pars) {
       using std::vector;
       using stan::math::var;
 
@@ -183,9 +196,22 @@ namespace torsten{
     }
 
     template<PMXOdeIntegratorId It, typename... scalar_pars_type>
+    /**
+     * For MPI solutions, after each rank solves its corresponding
+     * subjects, all ranks sync their results among each other.
+     *
+     * @param i id of the event to be synced
+     * @param init <code>var</code> solution
+     * @param sol_d data solution
+     * @param em event manager
+     * @param integrator numerical integrator for ODE
+     * @param scalar_pars params needed to construst the PMX model.
+     */
     void stepper_sync(int i, torsten::PKRec<typename EM::T_scalar>& init,
                       torsten::PKRec<double>& sol_d,
-                      const EM& em, const PMXOdeIntegrator<It> integrator, const scalar_pars_type... scalar_pars) {
+                      const EM& em,
+                      const PMXOdeIntegrator<It> integrator,
+                      const scalar_pars_type... scalar_pars) {
       using std::vector;
       using stan::math::var;
 
@@ -218,7 +244,7 @@ namespace torsten{
       }
 
       if (events.is_bolus_dosing(i)) {
-        init(0, events.cmt(i) - 1) += em.fractioned_amt(i);
+        init(events.cmt(i) - 1) += em.fractioned_amt(i);
       }
     }
 
@@ -270,7 +296,7 @@ namespace torsten{
 
         const int nKeep = events_rec.num_event_times(id);
 
-        int nev = EM::num_events(id, events_rec, theta, array_2d_pars...);
+        int nev = EM::num_events(id, events_rec, theta, array_2d_tuple_pars...);
         res_d[id].resize(system_size(id, events_rec, theta), nev);
         res_d[id].setConstant(0.0);
 

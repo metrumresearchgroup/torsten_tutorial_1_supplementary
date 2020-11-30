@@ -135,7 +135,7 @@ TEST_F(TorstenTwoCptModelTest, infusion_theta_grad) {
   };
 
   std::vector<double> pars{CL, Q, V2, V3, ka};
-  torsten::test::test_grad(f1, f3, pars, 1.e-3, 1.e-16, 1.e-6, 2.e-10);
+  torsten::test::test_grad(f1, f3, pars, 1.e-3, 2.e-12, 1.e-6, 2.e-10);
   torsten::test::test_grad(f2, f3, pars, 1.e-3, 3.e-12, 1.e-6, 2.e-10);
 }
 
@@ -1069,9 +1069,9 @@ TEST_F(TorstenTwoCptModelTest, ss_solver_const_infusion) {
   stan::math::set_zero_all_adjoints();
   y1(1).grad(theta, g1);
   EXPECT_FLOAT_EQ(g1[0], -640);
-  EXPECT_NEAR(g1[1], 0.0, 1e-18);
+  EXPECT_NEAR(g1[1], 0.0, 1e-12);
   EXPECT_FLOAT_EQ(g1[2], 80);
-  EXPECT_NEAR(g1[3], 0.0, 1e-18);
+  EXPECT_NEAR(g1[3], 0.0, 1e-12);
   EXPECT_FLOAT_EQ(g1[4], 0);
   stan::math::set_zero_all_adjoints();
   y1(2).grad(theta, g1);

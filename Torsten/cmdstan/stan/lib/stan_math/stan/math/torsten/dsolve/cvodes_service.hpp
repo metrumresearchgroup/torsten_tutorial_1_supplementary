@@ -243,26 +243,15 @@ namespace torsten {
           return 0;
       }
 
-      // sens
-      template <bool needs_sens>
-      struct cvodes_sens_rhs_impl {
-        static int f(int ns, double t, N_Vector y, N_Vector ydot,
-                     N_Vector* ys, N_Vector* ysdot, void* user_data,
-                     N_Vector temp1, N_Vector temp2) {
-            cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);
-            ode -> eval_sens_rhs(ns, t, y, ydot, ys, ysdot, temp1, temp2);
-            return 0;
-          }
-      };
-
-      template <>
-      struct cvodes_sens_rhs_impl<false> {
-        static int f(int ns, double t, N_Vector y, N_Vector ydot,
-                     N_Vector* ys, N_Vector* ysdot, void* user_data,
-                     N_Vector temp1, N_Vector temp2) {
-          return 0;
+      static int cvodes_sens_rhs_impl(int ns, double t, N_Vector y, N_Vector ydot,
+                                      N_Vector* ys, N_Vector* ysdot, void* user_data,
+                                      N_Vector temp1, N_Vector temp2) {
+        if (Ode::need_fwd_sens) {
+          cvodes_user_data<Ode>* ode = static_cast<cvodes_user_data<Ode>*>(user_data);
+          ode -> eval_sens_rhs(ns, t, y, ydot, ys, ysdot, temp1, temp2);            
         }
-      };
+        return 0;
+      }
 
       /**
        * return a closure for CVODES sensitivity RHS callback using a
@@ -274,7 +263,7 @@ namespace torsten {
       static int cvodes_sens_rhs(int ns, double t, N_Vector y, N_Vector ydot,
                                  N_Vector* ys, N_Vector* ysdot, void* user_data,
                                  N_Vector temp1, N_Vector temp2) {
-        return cvodes_sens_rhs_impl<Ode::need_fwd_sens>::f(ns, t, y, ydot, ys, ysdot, user_data, temp1, temp2);
+        return cvodes_sens_rhs_impl(ns, t, y, ydot, ys, ysdot, user_data, temp1, temp2);
       }
     };
 

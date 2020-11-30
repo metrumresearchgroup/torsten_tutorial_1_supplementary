@@ -230,6 +230,11 @@ int command(int argc, const char *argv[]) {
 #ifdef MPI_ADAPTED_WARMUP
   stan::callbacks::mpi_stream_writer sample_writer(num_cross_chains, output_stream, "# ");
 #else
+  int_argument *sig_figs_arg
+      = dynamic_cast<int_argument *>(parser.arg("output")->arg("sig_figs"));
+  if (!sig_figs_arg->is_default()) {
+    output_stream << std::setprecision(sig_figs_arg->value());
+  }
   stan::callbacks::stream_writer sample_writer(output_stream, "# ");
 #endif
 

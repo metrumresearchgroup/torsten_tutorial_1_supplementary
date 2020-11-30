@@ -114,10 +114,10 @@ TEST_F(TorstenCoupledTwoCptTest, single_bolus_overload) {
 
   TORSTEN_ODE_PARAM_OVERLOAD_TEST(pmx_solve_twocpt_rk45, f,
                                   nPD, time, amt, rate, ii, evid, cmt, addl, ss, parameters,
-                                  biovar, tlag, 1e-10, 1e-10);
+                                  biovar, tlag, 1e-10, 1.5e-10);
   TORSTEN_ODE_PARAM_OVERLOAD_TEST(pmx_solve_twocpt_bdf, f,
                                   nPD, time, amt, rate, ii, evid, cmt, addl, ss, parameters,
-                                  biovar, tlag, 1e-10, 1e-10);
+                                  biovar, tlag, 1e-10, 1.5e-10);
 }
 
 TEST_F(TorstenCoupledTwoCptTest, truncated_infusion) {

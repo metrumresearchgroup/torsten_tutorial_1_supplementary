@@ -68,7 +68,6 @@ namespace torsten {
                  const std::vector<std::vector<double> >& x_r,
                  const std::vector<std::vector<int> >& x_i,
                  std::ostream* msgs) {
-        using torsten::dsolve::pmx_ode_group_mpi_functor;
         using torsten::dsolve::pmx_ode_group_mpi_functor_id;
 
         stan::math::mpi::Communicator& pmx_comm = torsten::mpi::Session::ode_parm_comm();
