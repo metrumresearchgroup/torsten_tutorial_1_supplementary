@@ -59,5 +59,8 @@ model {
 generated quantities {
   real concentrationObsPred[nObs] 
     = exp(normal_rng(log(concentrationObs), sigma));
-}
 
+  vector[nObs] log_lik;
+  for (i in 1:nObs)
+    log_lik[i] = normal_lpdf(logCObs[i] | log(concentrationObs[i]), sigma);
+}

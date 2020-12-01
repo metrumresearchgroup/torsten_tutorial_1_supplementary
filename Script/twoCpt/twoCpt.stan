@@ -3,7 +3,7 @@ data {
   int<lower = 1> nEvent;
   int<lower = 1> nObs;
   int<lower = 1> iObs[nObs];
-  
+
   // Event schedule
   int<lower = 1> cmt[nEvent];
   int evid[nEvent];
@@ -13,7 +13,7 @@ data {
   real time[nEvent];
   real rate[nEvent];
   real ii[nEvent];
-  
+
   vector<lower = 0>[nObs] cObs;
 }
 
@@ -21,7 +21,7 @@ transformed data {
   vector[nObs] logCObs = log(cObs);
   int nTheta = 5;
   int nCmt = 3;
-  
+
   real biovar[nCmt] = {1.0, 1.0, 1.0};
   real tlag[nCmt] = {0.0, 0.0, 0.0};
 }
@@ -41,11 +41,8 @@ transformed parameters {
   row_vector<lower = 0>[nObs] concentrationObs;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
-  mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss, theta);
-  // "biovar" & "tlag" can be optional, in which case we have biovar = 1.0, tlag = 0.0. 
-  // So statements below are equivalent:
-  // mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
-  // mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar);
+  mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss,
+                          theta, biovar, tlag);
 
   concentration = mass[2, ] ./ VC;
   concentrationObs = concentration[iObs];
@@ -60,10 +57,15 @@ model {
   ka ~ lognormal(log(2.5), 1);
   sigma ~ normal(0, 1);
 
+  // likelihood
   logCObs ~ normal(log(concentrationObs), sigma);
 }
 
 generated quantities {
   real concentrationObsPred[nObs] 
     = exp(normal_rng(log(concentrationObs), sigma));
+
+  vector[nObs] log_lik;
+  for (i in 1:nObs)
+    log_lik[i] = normal_lpdf(logCObs[i] | log(concentrationObs[i]), sigma);
 }
