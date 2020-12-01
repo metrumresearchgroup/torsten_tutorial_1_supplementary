@@ -41,8 +41,11 @@ transformed parameters {
   row_vector<lower = 0>[nObs] concentrationObs;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
-  mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                          theta, biovar, tlag);
+  mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss, theta);
+  // "biovar" & "tlag" can be optional, in which case we have biovar = 1.0, tlag = 0.0. 
+  // So statements below are equivalent:
+  // mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar, tlag);
+  // mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss, theta, biovar);
 
   concentration = mass[2, ] ./ VC;
   concentrationObs = concentration[iObs];
