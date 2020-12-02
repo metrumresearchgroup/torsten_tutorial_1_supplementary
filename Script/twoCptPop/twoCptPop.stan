@@ -77,7 +77,8 @@ model {
   VP_pop ~ lognormal(log(105), prior_sd[4]);
   ka_pop ~ lognormal(log(2.5), prior_sd[5]);
   sigma ~ normal(0, 1);
-  omega ~ lognormal(prior_sd, 0.2);
+  omega ~ lognormal(0.25, 0.1);
+  // omega ~ lognormal(prior_sd, 0.2);
 
   // hierarchical prior
   for (j in 1:nSubjects)

@@ -65,7 +65,7 @@ init <- function () {
   
   list(CL_pop = CL_pop, Q_pop = Q_pop, VC_pop = VC_pop, VP_pop = VP_pop,
        ka_pop = ka_pop, omega = omega, theta = theta,
-       sigma = abs(rnorm(1, 0, 0.25)))   
+       sigma = abs(rnorm(1, 0, 0.1)))   
 }
 
 ##########################################################################
