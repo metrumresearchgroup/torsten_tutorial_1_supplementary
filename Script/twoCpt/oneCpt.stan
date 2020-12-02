@@ -21,9 +21,6 @@ transformed data {
   vector[nObs] logCObs = log(cObs);
   int nTheta = 3;
   int nCmt = 2;
-  
-  real biovar[nCmt] = {1.0, 1.0};
-  real tlag[nCmt] = {0.0, 0.0};
 }
 
 parameters {
@@ -39,8 +36,7 @@ transformed parameters {
   row_vector<lower = 0>[nObs] concentrationObs;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
-  mass = pmx_solve_onecpt(time, amt, rate, ii, evid, cmt, addl, ss,
-                          theta, biovar, tlag);
+  mass = pmx_solve_onecpt(time, amt, rate, ii, evid, cmt, addl, ss, theta);
 
   concentration = mass[2, ] ./ VC;
   concentrationObs = concentration[iObs];

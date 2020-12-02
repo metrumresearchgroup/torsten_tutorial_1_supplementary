@@ -26,9 +26,6 @@ transformed data {
   int nCmt = 3;
   int nIIV = 5;
 
-  real biovar[nCmt] = {1.0, 1.0, 1.0};
-  real tlag[nCmt] = {0.0, 0.0, 0.0};
-
   real prior_sd[nIIV] = {0.25, 0.5, 0.25, 0.5, 1};
 }
 
@@ -63,7 +60,7 @@ transformed parameters {
                                                cmt[start[j]:end[j]],
                                                addl[start[j]:end[j]],
                                                ss[start[j]:end[j]],
-                                               theta[j, ], biovar, tlag);
+                                               theta[j, ]);
 
     concentration[start[j]:end[j]] = 
                       mass[2, start[j]:end[j]] / theta[j, 3];
@@ -80,7 +77,7 @@ model {
   VP_pop ~ lognormal(log(105), prior_sd[4]);
   ka_pop ~ lognormal(log(2.5), prior_sd[5]);
   sigma ~ normal(0, 1);
-  omega ~ lognormal(1, prior_sd);
+  omega ~ lognormal(prior_sd, 0.2);
 
   // hierarchical prior
   for (j in 1:nSubjects)
@@ -113,7 +110,7 @@ generated quantities {
                       cmt[start[j]:end[j]],
                       addl[start[j]:end[j]],
                       ss[start[j]:end[j]],
-                      thetaNew[j, ], biovar, tlag);
+                      thetaNew[j, ]);
 
       concentrationNew[start[j]:end[j]]
         = massNew[2, start[j]:end[j]] / thetaNew[j, 3];

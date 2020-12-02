@@ -55,7 +55,6 @@ fit <- mod$sample(data = data, chains = n_chains, init = init,
                   iter_warmup = 500, iter_sampling = 500,
                   seed = 123, adapt_delta = 0.95)
 
-
 dir.create("deliv")
 fit$save_object(paste0("deliv/", model_name, ".fit.RDS"))
 
@@ -69,7 +68,7 @@ print(fit$time(), digits = 3)
 
 pars = c("lp__", "CL_pop", "Q_pop", "VC_pop", "VP_pop",
          "ka_pop", "sigma")
-fit$summary(pars)
+fit$summary(c(pars, "omega"))
 bayesplot::mcmc_trace(fit$draws(), pars = pars)
 bayesplot::mcmc_dens_overlay(fit$draws(), pars = pars)
 
