@@ -20,31 +20,10 @@ bayesplot::color_scheme_set("mix-blue-green")
 
 data <- fromJSON(file = "twoCptPop.data.json")
 
-# n_subjects <- 3
-# index <- 1:data$end[n_subjects]
-# data_sub <- with(data, list(
-#   cmt = cmt[index],
-#   addl = addl[index],
-#   nIIV = nIIV,
-#   rate = rate[index],
-#   start = start[1:n_subjects],
-#   cObs = cObs[index],
-#   ss = ss[index],
-#   evid = evid[index],
-#   amt = amt[index],
-#   nEvent = end[n_subjects],
-#   time = time[index],
-#   ii = ii[index],
-#   nSubjects = n_subjects,
-#   end = end[1:n_subjects],
-#   iObs = iObs[1:match(end[n_subjects], iObs)],
-#   nObs = length(iObs[1:match(end[n_subjects], iObs)])
-# ))
-
-
 # Draw initial conditions from the prior
 # draw parameters from prior
 init <- function () {
+  n_subjects <- data$nSubjects
   pop_var <- c(0.25, 0.5, 0.25, 0.5, 1)
   
   CL_pop <- exp(rnorm(1, log(10), pop_var[1]))
@@ -97,16 +76,24 @@ bayesplot::mcmc_dens_overlay(fit$draws(), pars = pars)
 ##########################################################################
 ## Posterior predictive checks
 
-# the predictive draws need to be turned into a matrix.
 yrep <- as.matrix(
   as_draws_df(
-    fit$draws(variables = c("concentrationObsPred"))
-    ))[, -(52:54)]
+    fit$draws(variables = c("concentrationObsPred"))))
+yrep <- yrep[, -((ncol(yrep) - 2):ncol(yrep))]
 
 yobs <- data$cObs
-time <- data$time[-1]
+time <- data$time[data$iObs]
+patientID <- with(data, rep(1:nSubjects, each = nObs / nSubjects))
 
-# Bayesplot offers various functions we can experiment with.
-bayesplot::ppc_intervals(y = yobs, yrep = yrep, x = time)
-bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time)
+# within patient predictions
+bayesplot::ppc_intervals_grouped(y = yobs, yrep = yrep, x = time, patientID)
+bayesplot::ppc_ribbon_grouped(y = yobs, yrep = yrep, x = time, patientID)
 
+# predictions for new patient
+yrepNew <- as.matrix(
+  as_draws_df(
+    fit$draws(variables = c("cObsNewPred"))))
+yrepNew <- yrepNew[, -((ncol(yrepNew) - 2):ncol(yrepNew))]
+
+bayesplot::ppc_intervals_grouped(y = yobs, yrep = yrepNew, x = time, patientID)
+bayesplot::ppc_ribbon_grouped(y = yobs, yrep = yrepNew, x = time, patientID)

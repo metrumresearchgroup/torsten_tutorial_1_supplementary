@@ -45,8 +45,8 @@ data <- list(
   nObs = n_obs_persub * n_subjects
 )
 
-
-# draw parameters from prior
+# draw parameters from prior (prevent sigma from being too small
+# and omega from getting too large to insure plausible values).
 init <- function () {
   pop_var <- c(0.25, 0.5, 0.25, 0.5, 1)
  
@@ -55,7 +55,7 @@ init <- function () {
   VC_pop <- exp(rnorm(1, log(35), pop_var[3]))
   VP_pop <- exp(rnorm(1, log(105), pop_var[4]))
   ka_pop <- exp(rnorm(1, log(2.5), pop_var[5]))
-  omega <- abs(rnorm(5, 0, pop_var))
+  omega <- abs(rnorm(5, 0, pop_var / 2))
 
   theta_pop <- c(CL_pop, Q_pop, VC_pop, VP_pop, ka_pop)
   theta <- matrix(NA, n_subjects, length(theta_pop))
@@ -65,7 +65,7 @@ init <- function () {
   
   list(CL_pop = CL_pop, Q_pop = Q_pop, VC_pop = VC_pop, VP_pop = VP_pop,
        ka_pop = ka_pop, omega = omega, theta = theta,
-       sigma = abs(rnorm(1, 0, 1)))   
+       sigma = abs(rnorm(1, 0, 0.25)))   
 }
 
 ##########################################################################

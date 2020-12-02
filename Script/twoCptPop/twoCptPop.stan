@@ -28,7 +28,7 @@ transformed data {
 
   real biovar[nCmt] = {1.0, 1.0, 1.0};
   real tlag[nCmt] = {0.0, 0.0, 0.0};
-  
+
   real prior_sd[nIIV] = {0.25, 0.5, 0.25, 0.5, 1};
 }
 
@@ -94,5 +94,32 @@ model {
 generated quantities {
   real concentrationObsPred[nObs] 
     = exp(normal_rng(log(concentrationObs), sigma));
-}
 
+  real cObsNewPred[nObs];
+  matrix<lower = 0>[nCmt, nEvent] massNew;
+  real thetaNew[nSubjects, nTheta];
+  row_vector<lower = 0>[nEvent] concentrationNew;
+  row_vector<lower = 0>[nObs] concentrationObsNew;
+
+  for (j in 1:nSubjects) {
+    thetaNew[j, ] = lognormal_rng(log(theta_pop), omega);
+
+    massNew[, start[j]:end[j]]
+      = pmx_solve_twocpt(time[start[j]:end[j]],
+                      amt[start[j]:end[j]],
+                      rate[start[j]:end[j]],
+                      ii[start[j]:end[j]],
+                      evid[start[j]:end[j]],
+                      cmt[start[j]:end[j]],
+                      addl[start[j]:end[j]],
+                      ss[start[j]:end[j]],
+                      thetaNew[j, ], biovar, tlag);
+
+      concentrationNew[start[j]:end[j]]
+        = massNew[2, start[j]:end[j]] / thetaNew[j, 3];
+
+      concentrationObsNew = concentrationNew[iObs];
+  }
+
+  cObsNewPred = exp(normal_rng(log(concentrationObsNew), sigma));
+}
