@@ -24,7 +24,7 @@ data <- fromJSON(file = "twoCptPop.data.json")
 # draw parameters from prior
 init <- function () {
   n_subjects <- data$nSubjects
-  pop_var <- c(0.25, 0.5, 0.25, 0.5, 1)
+  pop_var <- c(0.25, 0.5, 0.25, 0.5, 0.25)
   
   CL_pop <- exp(rnorm(1, log(10), pop_var[1]))
   Q_pop <- exp(rnorm(1, log(15), pop_var[2]))
@@ -53,7 +53,7 @@ n_chains <- 4
 fit <- mod$sample(data = data, chains = n_chains, init = init,
                   parallel_chains = n_chains,
                   iter_warmup = 500, iter_sampling = 500,
-                  seed = 123, adapt_delta = 0.95)
+                  seed = 123, adapt_delta = 0.8)
 
 dir.create("deliv")
 fit$save_object(paste0("deliv/", model_name, ".fit.RDS"))

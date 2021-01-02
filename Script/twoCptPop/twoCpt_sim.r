@@ -8,9 +8,10 @@ setwd("~/Code/torsten_tutorial_psp/Script/twoCptPop")
 
 library(cmdstanr)
 library(rjson)
+library(posterior)
 set_cmdstan_path("../../Torsten/cmdstan/")
 
-n_subjects <- 3
+n_subjects <- 10
 n_obs_persub <- 51
 n_event <- n_obs_persub + 1
 start <- c(1, 1:(n_subjects - 1)  * n_event + 1)
@@ -48,7 +49,7 @@ data <- list(
 # draw parameters from prior (prevent sigma from being too small
 # and omega from getting too large to insure plausible values).
 init <- function () {
-  pop_var <- c(0.25, 0.5, 0.25, 0.5, 1)
+  pop_var <- c(0.25, 0.5, 0.25, 0.5, 0.25)
  
   CL_pop <- exp(rnorm(1, log(10), pop_var[1]))
   Q_pop <- exp(rnorm(1, log(15), pop_var[2]))
@@ -89,3 +90,4 @@ plot(x = data$time[data$iObs], y = yrep)
 data$cObs <- unname(yrep)
 
 write_stan_json(data, "twoCptPop.data.json")
+
