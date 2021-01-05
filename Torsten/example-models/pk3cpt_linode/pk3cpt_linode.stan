@@ -17,11 +17,11 @@ data{
   real rate[nt];
   real ii[nt];
   
-  vector<lower = 0>[nObs] cObs;  // observed concentration (dependent variable)
+  row_vector<lower = 0>[nObs] cObs;  // observed concentration (dependent variable)
 }
 
 transformed data{
-  vector[nObs] logCObs = log(cObs);
+  row_vector[nObs] logCObs = log(cObs);
   int nCmt = 3;
   real biovar[nCmt];
   real tlag[nCmt];
@@ -39,7 +39,6 @@ parameters{
   real<lower = 0> V2;
   real<lower = 0> ka;
   real<lower = 0> sigma;
-
 }
 
 transformed parameters{
@@ -47,9 +46,9 @@ transformed parameters{
   real k10 = CL / V1;
   real k12 = Q / V1;
   real k21 = Q / V2;
-  vector<lower = 0>[nt] cHat;
-  vector<lower = 0>[nObs] cHatObs;
-  matrix<lower = 0>[nt, 3] x;
+  row_vector<lower = 0>[nt] cHat;
+  row_vector<lower = 0>[nObs] cHatObs;
+  matrix<lower = 0>[3, nt] x;
 
   K = rep_matrix(0, 3, 3);
   
@@ -60,13 +59,9 @@ transformed parameters{
   K[3, 2] = k12;
   K[3, 3] = -k21;
 
-  // linModel takes in the constant rate matrix, the object theta which
-  // contains the biovariability fraction and the lag time of each compartment,
-  // and the NONMEM data.
-  x = linOdeModel(time, amt, rate, ii, evid, cmt, addl, ss,
-                  K, biovar, tlag);
+  x = pmx_solve_linode(time, amt, rate, ii, evid, cmt, addl, ss, K, biovar, tlag);
 
-  cHat = col(x, 2) ./ V1;
+  cHat = row(x, 2) ./ V1;
 
   for(i in 1:nObs){
     cHatObs[i] = cHat[iObs[i]];  // predictions for observed data records
@@ -89,6 +84,6 @@ generated quantities{
   real cObsPred[nObs];
 
   for(i in 1:nObs){
-      cObsPred[i] = exp(normal_rng(log(cHatObs[i]), sigma));
-    }
+    cObsPred[i] = exp(normal_rng(log(cHatObs[i]), sigma));
+  }
 }

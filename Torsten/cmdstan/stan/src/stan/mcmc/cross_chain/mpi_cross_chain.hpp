@@ -123,7 +123,10 @@ namespace util {
 
     if (Session::is_in_inter_chain_comm(num_chains)) {
       const Communicator& comm = Session::inter_chain_comm(num_chains);
-      file_name = "mpi." + std::to_string(comm.rank()) + "." + file_name;
+      boost::filesystem::path p(file_name);
+      std::string ext = "mpi." + std::to_string(comm.rank()) + p.extension().string();
+      p.replace_extension(boost::filesystem::path(ext));
+      file_name = p.string();
     }
 #endif
   }
