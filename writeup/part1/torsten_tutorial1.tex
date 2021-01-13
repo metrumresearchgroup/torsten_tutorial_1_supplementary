@@ -1,0 +1,80 @@
+\documentclass[11pt]{article}
+\usepackage{newclude}
+\usepackage{apacite}
+\usepackage{amssymb,amsmath}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{natbib}
+
+% Verbantim - use to define \texttt{Stan} Code
+\usepackage{fancyvrb}
+
+% Code and packages for code figures
+\usepackage{pdfpages}
+\usepackage{listings}
+\newsavebox{\fmbox}
+\newenvironment{fmpage}[1]
+   {\begin{lrbox}{\fmbox}\begin{minipage}{#1}}
+   {\end{minipage}\end{lrbox}\fbox{\usebox{\fmbox}}}
+
+% enumerate using letters
+\usepackage{enumitem}
+
+% package to control position of figures
+\usepackage{float}
+
+% control margins
+\usepackage[left=4cm, right=4cm, top=2cm]{geometry}
+
+% for fancy Mike style table
+\usepackage[table]{xcolor} 
+\usepackage{multirow}
+
+% algorithm
+\usepackage{algorithm, setspace}
+\usepackage[noend]{algpseudocode}
+\DefineVerbatimEnvironment{Stancode}{Verbatim}{fontsize=\small,xleftmargin=2em}  % \texttt{Stan} Code
+
+% package for drawing graphs
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+
+% quote
+\usepackage{epigraph}
+
+\title{Torsten tutorial I}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  TBD
+\end{abstract}
+
+\section{Introduction}
+\input{Intro.tex}
+
+\section{Two compartment model}
+\input{twoCpt.tex}
+
+\section{Two compartment population model}
+\input{twoCptPop.tex}
+
+\section{Non-linear pharmacokinetic / pharmacodynamic model}
+\input{nonlinear.tex}
+
+\section{Conclusion}
+\input{conclusion.tex}
+
+\bibliographystyle{abbrv}
+\bibliography{../ref.bib}
+
+
+
+
+
+
+\end{document}
