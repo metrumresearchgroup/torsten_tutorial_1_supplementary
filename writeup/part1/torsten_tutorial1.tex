@@ -6,6 +6,9 @@
 \usepackage{graphicx}
 \usepackage{natbib}
 
+% TODO: change options
+\usepackage{hyperref}
+
 % Verbantim - use to define \texttt{Stan} Code
 \usepackage{fancyvrb}
 
@@ -42,7 +45,7 @@
 % quote
 \usepackage{epigraph}
 
-\title{Torsten tutorial I}
+\title{Torsten Tutorial, Part I}
 \author{}
 \date{}
 
@@ -51,11 +54,20 @@
 \maketitle
 
 \begin{abstract}
-  TBD
+  Stan is an open-source probabilistic programing language, primarily designed to do Bayesian data analysis.
+  Its main inference algorithm is an adaptive Hamiltonian Monte Carlo sampler, supported by state of the art gradient computation.
+  Stan bolsters several strengths, notably efficient computation, an expressive language which offers a great deal of flexibility, and numerous diagnostics that allow the modeler to check whether the inference is reliable.
+  Over the past years, much development efforts have been geared towards supporting models based on differential equations, such as those that arise in pharmacometrics.
+  Torsten extends Stan with a suite of functions that facilitate the specification of pharmacokinetic and pharmacodynamic models, and makes it straightforward to specify a clinical event schedule.
+  Part I of this tutorial demonstrates how to build, fit, and criticize simple pharmacokinetic models using Stan and Torsten.
 \end{abstract}
 
 \section{Introduction}
 \input{Intro.tex}
+% Basic concepts of Bayesian modeling
+% Why Stan?
+% Why Torsten?
+% Downloading the software and references.
 
 \section{Two compartment model}
 \input{twoCpt.tex}

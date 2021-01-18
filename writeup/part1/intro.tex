@@ -1,2 +1,89 @@
 
-The probabilistic programing language Stan \cite{Carpenter:2017}.
+Bayesian inference offers a principled approach to learn about unknowns from data using a probabilistic analysis.
+The conclusions we draw are based on the posterior distribution which, in all but the simplest cases, is intractable.
+We can however probe the posterior and numerically compute its characteristics, e.g. expectation value, variance, and quantiles, by using algorithms such as Markov chains Monte Carlo (MCMC).
+Implementing these algorithms is a tedious and error prone endeavor, but fortunately modelers can often rely on existing software with efficient implementations.
+Probabilistic programing languages are designed to let users specify a model and then run inference on the backend.
+
+In the field of pharmacometrics, statistical software such as NONMEM \cite{author:0000} and Monolix \cite{author:0000} support many routines to specify and analyze pharmacokinetic and pharmacodynamic population models.
+There also exist a host of more general probabilistic languages such as, to only name a few, BUGS \cite{author:0000} and more recently Stan \cite{Carpenter:2017}, which will be the focus of this tutorial.
+Stan supports a rich library of probability densities, matrix operations and numerical solvers for differential equations.
+These features make for a rich and flexible language, however specifying common pharmacometrics models can be tedious.
+Torsten extends Stan by providing a suite of functions to facilitate the specification of pharmacometrics models.
+These functions make it straightforward to model the event schedule of a clinical trial and parallelize computation across patients, and also provide analytical solutions for ordinary differential equations (ODEs) which commonly arise in the field.
+
+
+\subsection{Why Stan?}
+
+We believe that Stan, coupled with Torsten, can be an important addition to the pharmacometrician's toolkit, especially for Bayesian data analysis.
+
+The most obvious strength of Stan is its flexibility: it is straightforward to specify priors, systems of ODEs, a broad range of measurement models, missing data models and hierarchies.
+Because of this flexibility, various data sources and their corresponding measurement models can be combined into one large model, over which full Bayesian inference can be performed \cite[e.g][]{Weber:2018}.
+
+Secondly, Stan offers efficient inference algorithms, most notably its adaptive \textit{Hamiltonian Monte Carlo} (HMC) sampler, a gradient-based Markov chains Monte Carlo algorithm which scales in high dimensions \cite{Betancourt:2018, Hoffman:2014}, automatic differentiation variational inference \cite{author:0000}, and penalized maximum likelihood estimators.
+Stan's inference algorithms are supported by a state-of-the-art automatic differentiation library, which efficiently generates the requisite derivatives \cite{Carpenter:2015}.
+
+Thirdly, Stan runs many diagnostics -- including the detection of divergent transitions \cite{Betancourt:2018}, and the improved computation of effective sample sizes and scale reduction factors, $\hat R$ \cite{Vehtari:2020}, and more -- and gives detailed warning messages.
+This makes it considerably easier to identify issues with our inference and our models.
+Several of these tools improve commonly used diagnostics which may not detect important problems, in which case our model fitting fails without us realizing it.
+Stan fails better: it fails loudly. 
+
+Last but not least, both Stan and Torsten are open-source projects, meaning  they are free and their source code can be examined, and if needed scrutanized.
+The projects are under active development with new features being continuously added.
+%Stan's vibrant community readily assists both new and experienced users, through the Stan forum: \url{https://discourse.mc-stan.org/}.
+
+\subsection{Bayesian inference: notation, goals, and comments}
+
+Given observed data, $y$, and latent variables, $\theta$, a Bayesian model is defined by the joint distribution, $\pi(y, \theta)$.
+The latent variables can include model parameters, missing data, and more.
+In this tutorial, we are mostly concern with estimating model parameters.
+The Bayesian proposition is to base our inference on the \textit{posterior}, $\pi(\theta \mid y)$.
+This posterior density describes the set of parameter values which are consistent with the model and the data, with the more consistent parameter values being assigned a higher density.
+One interpretation is that we are treating the parameters as ``random variables''.
+Technically this is true if we go back to the measure theoretical definition of a random variable. 
+In a more colloquial setting, this turn of phrase may be more suggestive than needed.
+Our interpretation is the following: we want to describe all the reasonable parameter values, quantify how consistent they are with our model and data, and to do this, the right mathematical formalism is that of a probability distribution.
+
+It is worth pointing out that the posterior density is an unfathomable object which lives in a high dimensional space.
+There is no such thing as ``computing the posterior distribution''.
+We cannot even numerically evaluate the posterior density at any particular point!
+Instead we must probe the posterior distribution and learn the characteristics that interest us the most.
+In our experience, this includes a measure of a central tendency and a quantification of uncertainty, for example the mean and the variance, or the median and several quantiles.
+What we compute are estimates of these quantities.
+One strategy is to generate \textit{approximate} samples from the posterior distribution and then use a sample mean, sample variance, and sample quantiles.
+
+Bayes' rule teaches us that
+\begin{equation*}
+  \pi(\theta \mid y) = \frac{\pi(y, \theta)}{\pi(y)}.
+\end{equation*}
+Typically we can evaluate the joint density -- as this is how we define our model! -- but not the denominator.
+Lucky for us, HMC only requires the log joint density and its gradient to generate approximate samples from the posterior distribution.
+For this procedure to be well-defined, $\theta$ must be a continuous variable.
+Discrete parameters require a special treatment, which we will not discuss in this tutorial.
+A Stan program specifies a method to evaluate $\log \pi(y, \theta)$.
+Thanks to automatic differentiation, this implicitly defines a method to compute $\nabla_\theta \log \pi(y, \theta)$.
+
+The joint distribution observes a convenient decomposition,
+\begin{equation*}
+  \pi(y, \theta) = \pi(\theta) \pi(y \mid \theta),
+\end{equation*}
+%
+with $\pi(\theta)$ the \textit{prior} distribution and $\pi(y \mid \theta)$ the \textit{likelihood}.
+The prior encodes information about the parameters, usually based on scientific expertise or results from previous analysis.
+It is a potent tool to encode prior knowledge -- hence the name -- or lack thereof using a probabilistic statement.
+The likelihood tells us how the data is distributed for a fixed parameter value and, per one interpretation, can be thought of as a ``story of how the data is generated'' \cite{Gelman:2013}.
+
+\subsection{Bayesian workflow}
+
+Bayesian inference is only one step of a broader modeling process, which we might call the Bayesian workflow \cite{Betancourt:2018, Gelman:2020}.
+Once we fit the model, we need to check the inference and if needed, fine tune our algorithm, or potentially change method.
+And once we trust the inference, we naturally need to check the fitted model.
+Our goal is to understand the shortcomings of our model and motivate useful revisions.
+During the early stages of model development, this mostly comes down to troubleshooting our implementation and later this ``criticism'' step can lead to deeper insights.
+
+All through the tutorial, we will demonstrate how Stan and Torsten can be used to check our inference and our fitted model.
+
+\subsection{Setting up Stan and Torsten}
+
+
+ 

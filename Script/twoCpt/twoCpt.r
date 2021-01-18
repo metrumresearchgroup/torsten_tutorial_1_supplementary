@@ -77,7 +77,7 @@ time <- data$time[-1]
 
 # Bayesplot offers various functions we can experiment with.
 bayesplot::ppc_intervals(y = yobs, yrep = yrep, x = time)
-bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time)
+bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time, y_draw = "point")
 
 # compute PSIS-loo estimate
 log_lik_draws <- fit$draws("log_lik")
