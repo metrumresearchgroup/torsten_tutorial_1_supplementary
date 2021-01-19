@@ -45,6 +45,39 @@
 % quote
 \usepackage{epigraph}
 
+% Code to write Stan code
+\usepackage{listings}
+\lstset{escapeinside={<@}{@>}}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.99,0.99,0.97}
+\lstdefinestyle{stan}{
+	literate={~}{$\sim$}{1},
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywords = {real, vector, matrix, data, model, parameters, transformed, target},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	emph={%  
+		normal%
+	},
+	emphstyle=\color{codepurple},%
+	basicstyle={\ttfamily},
+	% breakatwhitespace=false,         
+	breaklines=true,                 
+	% captionpos=b,                    
+	keepspaces=true,                 
+%	numbers=left,                    
+%	numbersep=5pt,                  
+	showspaces=false,                
+	% showstringspaces=false,
+	% showtabs=false,                  
+	% tabsize=2
+}
+\lstset{style=stan}
+
 \title{Torsten Tutorial, Part I}
 \author{}
 \date{}
@@ -68,6 +101,9 @@
 % Why Stan?
 % Why Torsten?
 % Downloading the software and references.
+
+%\section{Specifying a model in Stan}
+%\input{basicStan.tex}
 
 \section{Two compartment model}
 \input{twoCpt.tex}

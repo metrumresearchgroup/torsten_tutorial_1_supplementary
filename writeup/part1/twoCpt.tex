@@ -1,1 +1,36 @@
 
+As a starting example, we consider a compartment pharmacokinetic model for a single patient.
+The patient receives multiple doses at regular time intervals and the drug plasma concentration is recorded over time.
+Our goal is to infer the physiological parameters of the patient, pertinent to the drug's pharmacokinetics, and the variance of our measurements.
+
+\subsection{Pharmacokinetic model and clinical event schedule} 
+
+The two compartment pharmacokinetic model describes how the drug circulates in the patient's body, until it is cleared out (Figure~\ref{fig:twocpt}).
+The drug is orally administered and therefore enters the system through the gut.
+Over time it is cleared out.
+Once the drug is introduced in the system, the \textit{natural evolution} of the system is described by a system of ODEs.
+In the case of a two compartment model with a first-order absorption from the gut, the system is the following:
+%
+\begin{eqnarray*}
+  \frac{\mathrm d y_\mathrm{gut}}{\mathrm d t} & = & - k_a y_\mathrm{gut} \\ 
+  \frac{\mathrm d y_\mathrm{central}}{\mathrm d t} & = & k_a y_\mathrm{gut} - \left (\frac{CL}{V_\mathrm{cent}} + \frac{Q}{V_\mathrm{cent}} \right) y_\mathrm{cent} + \frac{Q}{V_\mathrm{peri}} y_\mathrm{peri} \\
+  \frac{\mathrm d y_\mathrm{peri}}{\mathrm d t} & = & \frac{Q}{V_\mathrm{cent}} y_\mathrm{cent} - \frac{Q}{V_\mathrm{peri}} y_\mathrm{peri}
+\end{eqnarray*}
+%
+where...
+
+
+\subsection{Specifying a model in Stan}
+
+We can specify a model using a Stan file.
+From R, we then run inference algorithms which take this Stan file as an input.
+
+To define a model, we need a procedure which returns the log joint distribution, $\log p(\mathcal D, \theta)$.
+Our first task is to declare data, $\mathcal D$, and parameter, $\theta$, variables, using the coding blocks \texttt{data} and \texttt{parameters}.
+
+\begin{lstlisting}[style=stan, numbers=none] 
+  data {
+  
+  }
+ 
+\end{lstlisting}
