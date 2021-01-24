@@ -54,14 +54,18 @@
 \definecolor{backcolour}{rgb}{0.99,0.99,0.97}
 \lstdefinestyle{stan}{
 	literate={~}{$\sim$}{1},
-	backgroundcolor=\color{backcolour},   
+	backgroundcolor=\color{backcolour}, 
+	comment=[l]{//},
 	commentstyle=\color{codegreen},
-	keywords = {real, vector, matrix, data, model, parameters, transformed, target},
+	keywords = {int, real, vector, matrix, data, model, parameters, transformed, target, generated, quantities, for, in},
 	keywordstyle=\color{magenta},
 	numberstyle=\tiny\color{codegray},
 	stringstyle=\color{codepurple},
 	emph={%  
-		normal%
+		normal, normal_rng,
+		pmx_solve_twocpt,
+		cmdstan_model,
+		exp, log
 	},
 	emphstyle=\color{codepurple},%
 	basicstyle={\ttfamily},

@@ -57,8 +57,8 @@ fit$save_object(paste0("deliv/", model_name, ".fit.RDS"))
 
 print(fit$time(), digits = 3)
 
-# pars = c("lp__", "CL", "Q", "VC", "VP", "ka", "sigma")
-pars = c("lp__", "CL", "VC", "ka", "sigma")
+pars = c("CL", "Q", "VC", "VP", "ka", "sigma")
+# pars = c("lp__", "CL", "VC", "ka", "sigma")
 fit$summary(pars)
 bayesplot::mcmc_trace(fit$draws(), pars = pars)
 bayesplot::mcmc_dens_overlay(fit$draws(), pars = pars)
@@ -108,6 +108,8 @@ yrep2 <- as.matrix(
   ))[, -(52:54)]
 
 bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time)
+bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time, y_draw = "point") +
+  xlab("Time (h)") + ylab("Drug concentration (mg/L)")
 
 print(loo_estimate2)
 
@@ -117,7 +119,9 @@ loo_results <- data.frame(rbind(loo_estimate$estimate[1, ],
 loo_results$model <- c(model_name, model_name2)
 loo_results
 
+loo_results$model <- c("two compartment", "one compartment")
+
 p <- ggplot(loo_results, aes(x = model, y = Estimate)) + theme_bw() +
   geom_pointrange(aes(ymin = Estimate - SE, ymax = Estimate + SE),
-                  colour = "dark green") + ylab("elpd_loo")
-p
+                  colour = "dark green") + ylab("elpd loo")
+p + theme(text = element_text(size = 16))
