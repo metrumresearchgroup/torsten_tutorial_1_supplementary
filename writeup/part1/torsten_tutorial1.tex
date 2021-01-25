@@ -82,7 +82,7 @@
 }
 \lstset{style=stan}
 
-\title{Torsten Tutorial, Part I}
+\title{Bayesian pharmacometrics modeling \\ using Stan and Torsten, Part I}
 \author{}
 \date{}
 
@@ -93,8 +93,8 @@
 \begin{abstract}
   Stan is an open-source probabilistic programing language, primarily designed to do Bayesian data analysis.
   Its main inference algorithm is an adaptive Hamiltonian Monte Carlo sampler, supported by state of the art gradient computation.
-  Stan bolsters several strengths, notably efficient computation, an expressive language which offers a great deal of flexibility, and numerous diagnostics that allow the modeler to check whether the inference is reliable.
-  Over the past years, much development efforts have been geared towards supporting models based on differential equations, such as those that arise in pharmacometrics.
+  Stan bolsters several strengths, notably efficient computation, an expressive language which offers a great deal of flexibility, and numerous diagnostics that allow modelers to check whether the inference is reliable.
+  % Over the past years, much development efforts have been geared towards supporting models based on differential equations, such as those that arise in pharmacometrics.
   Torsten extends Stan with a suite of functions that facilitate the specification of pharmacokinetic and pharmacodynamic models, and makes it straightforward to specify a clinical event schedule.
   Part I of this tutorial demonstrates how to build, fit, and criticize simple pharmacokinetic models using Stan and Torsten.
 \end{abstract}

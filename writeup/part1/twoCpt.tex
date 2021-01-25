@@ -6,7 +6,7 @@ Our goal is to infer the physiological parameters of the patient, pertinent to t
 \subsection{Pharmacokinetic model and clinical event schedule} 
 
 The two compartment pharmacokinetic model describes how the drug circulates in the patient's body, until it is cleared out (Figure~\ref{fig:twocpt}).
-The drug is orally administered and therefore enters the system through the gut.
+The drug is orally administered and enters the system through the gut.
 Once the drug is introduced in the system, the \textit{natural evolution} of the system is described by a system of ODEs.
 In the case of a two compartment model with a first-order absorption from the gut, the system is the following:
 %
@@ -19,12 +19,12 @@ In the case of a two compartment model with a first-order absorption from the gu
 with
 \begin{itemize}
   \setlength\itemsep{0em}
-  \item $y(t)$: the drug mass in each compartment (mg)
-  \item $k_a$: the rate constant which the drug flows from the gut to the central compartment (h$^{-1}$)
-  \item $Q$: the clearance at which the drug flows back and forth between the central and the peripheral compartment (L/h)
-  \item $CL$: the clearance at which the drug is cleared from the central compartment (L / h)
-  \item $V_\mathrm{cent}$: the volume of the central compartment (L)
-  \item $V_\mathrm{peri}$: the volume of the peripheral compartment (L)
+  \item $y(t)$: the drug mass in each compartment (mg),
+  \item $k_a$: the rate constant at which the drug flows from the gut to the central compartment (h$^{-1}$),
+  \item $Q$: the clearance at which the drug flows back and forth between the central and the peripheral compartment (L/h),
+  \item $CL$: the clearance at which the drug is cleared from the central compartment (L / h),
+  \item $V_\mathrm{cent}$: the volume of the central compartment (L),
+  \item $V_\mathrm{peri}$: the volume of the peripheral compartment (L).
 \end{itemize}
 
 \begin{figure}
@@ -43,7 +43,7 @@ Appendix~\ref{app:event} reviews the role of each variable.
 
 \subsection{Statistical model}
 
-We define a generative model.
+% We define a generative model.
 Given a treatment, $x$, and the physiological parameters, $\{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri} \}$, we obtain the exact drug plasma concentration, $c$, by solving the relevant ODE.
 Our measurements, $y$, are a perturbation of $c$ because of our measurement error.
 We model this error using a lognormal error, that is
@@ -54,7 +54,8 @@ where $\sigma$ is a standard deviation we wish to estimate.
 The deterministic computation of $c$ along with the measurement model, defines our likelihood function $p(y \mid \theta, x)$, where $\theta = \{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri}, \sigma \}$.
 
 It remains to define a prior distribution, $p(\theta)$.
-Our prior should allocate probability mass to every plausible parameter value and exclude patently absurd values, e.g. the volume of the central compartment is on the order of ten liters, but it cannot be the size of the Sun.
+Our prior should allocate probability mass to every plausible parameter value and exclude patently absurd values.
+For example the volume of the central compartment is on the order of ten liters, but it cannot be the size of the Sun.
 In this simulated example, our priors for the individual parameters are based on population estimates from previous (hypothetical) studies.
 \begin{eqnarray*}
   CL & \sim & \mathrm{logNormal}(\log(10), 0.25);  \\
@@ -121,7 +122,7 @@ More importantly, parameters are transformed into unconstrained parameters -- fo
 \subsubsection{model block}
 
 Next, the \texttt{model} block allows us to modify the variable \texttt{target}, which Stan recognizes as the log joint distribution.
-The following statement increments \texttt{target} using the prior on $\sigma$, which a normal density, truncated at 0 to only put mass on positive values.
+The following statement increments \texttt{target} using the prior on $\sigma$, which is a normal density, truncated at 0 to only put mass on positive values.
 \begin{lstlisting}
   target += normal_lpdf(sigma | 0, 1);
 \end{lstlisting}
@@ -199,7 +200,7 @@ transformed parameters {
 \end{lstlisting} 
 
 The Stan file contains all the coding blocks in the following order: \texttt{data}, \texttt{transformed data}, \texttt{parameters}, \texttt{transformed parameters}, \texttt{model}.
-Appendix~\ref{app:name} contains the full Stan code.
+Appendix~\ref{app:name} provides the full Stan code.
 
 \subsection{Calling Stan from R}
 
@@ -211,8 +212,8 @@ The first step is to ``transpile'' the file -- call it \texttt{twocpt.stan} --, 
 mod <- cmdstan_model("twocpt.stan")
 \end{lstlisting}
 %
-We can then run Stan's HMC sampler, by passing in the requisite data and providing other tuning parameters,
-such as the number of sampling and warmup iterations, and the number of chains and whether to run them in parallel.
+We can then run Stan's HMC sampler by passing in the requisite data and providing other tuning parameters,
+such as the number of sampling and warmup iterations, and the number of Markov chains we run.
 \begin{lstlisting}
 fit <- mod$sample(data = data, chains = n_chains,
                   init = init,
@@ -222,12 +223,12 @@ fit <- mod$sample(data = data, chains = n_chains,
 \end{lstlisting}
 %
 There are several other arguments we can pass to the sampler and which we will take advantage of throughout the tutorial.
-For applications in pharmacometrics, we recommend specifying the initial starting points, for example by drawing them from the priors.
-The full R script can be found in the Supplementary Material.
+For applications in pharmacometrics, we recommend specifying the initial starting points via the \texttt{init} argument.
+In this in future examples, we will draw the initial points from their priors, by defining an appropriate R function.
 
-The \texttt{fit} object stores the samples generated by HMC from which can deduce the sample mean, sample variance, and sample quantiles of our posterior distribution.
-All this information is accessible using \texttt{fit\$summary()} and summarized in table~\ref{tab:summary}.
-Naturally we can construct more results, such as posterior covariances, using our posterior samples.
+The resulting \texttt{fit} object stores the samples generated by HMC from which can deduce the sample mean, sample variance, and sample quantiles of our posterior distribution.
+This information is readily accessible using \texttt{fit\$summary()} and summarized in table~\ref{tab:summary}.
+We could also extract the samples and perform any number of operations on them.
 
 \begin{table}[!h]
   \renewcommand{\arraystretch}{1.5}
@@ -235,15 +236,14 @@ Naturally we can construct more results, such as posterior covariances, using ou
   \rowcolor[gray]{0.95} & \bf mean & \bf median & \bf sd & \bf mad & \bf q5 & \bf q95 & $\bf \hat R$ & \bf ESS$_\mathrm{bulk}$ & \bf ESS$_\mathrm{tail}$ \\
 $CL$    &    10.0  &  10.0  &  0.378  & 0.367 &  9.39 &  10.6  &  1.00   & 1580  &  1348 \\\rowcolor[gray]{0.95} $Q$      &  19.8    & 19.5  &  4.00  &  4.01 &  13.8  &   26.8 &   1.00  &   985 &    1235 \\$V_\mathrm{cent}$   &   41.2  &  40.8 &   9.71   & 9.96  & 25.6 &   57.7   & 1.00   &  732  &  1120 \\\rowcolor[gray]{0.95} $V_\mathrm{peri}$    &  124 &   123 &    18.0  &  18.0 &    97.1 &  155 &   1.00  &  1877 &    1279 \\$k_a$       &  1.73   & 1.67 &  0.523  & 0.522   & 1.01 &   2.68 &   1.00   &  762 &    1108 \\\rowcolor[gray]{0.95} $\sigma$   & 0.224 &   0.222 &  0.0244 &  0.0232 &  0.187 &   0.269 &  1.01  & 1549 &   1083
   \end{tabular}
-  \caption{Summary of results when fitting a two compartment model. \textit{The first columns return the estimates of the posterior mean, median, standard deviation, median absolute deviation, $5^\mathrm{th}$ and $95^\mathrm{th}$ quantiles, based on our approximate samples.
+  \caption{Summary of results when fitting a two compartment model. \textit{The first columns return sample estimates of the posterior mean, median, standard deviation, median absolute deviation, $5^\mathrm{th}$ and $95^\mathrm{th}$ quantiles, based on our approximate samples.
   The next three columns return the $\hat R$ statistics and the effective sample size for bulk and tail estimates, and can be used to identify problems with our inference.}}
   \label{tab:summary}
 \end{table}
 
 \subsection{Checking our inference}
 
-We should naturally not assume that our inference is reliable.
-There is no guarantee that a particular inference algorithm will work across all the applications we will encounter.
+Unfortunately there is no guarantee that a particular algorithm will work across all the applications we will encounter.
 We can however make sure that certain necessary conditions do not break.
 Much of the MCMC literature focuses on estimating expectation values, and we will use these results to develop some intuition.
 
@@ -254,7 +254,7 @@ For any function $f$ of our latent parameters $\theta$, we define the posterior 
   \mathbb E f = \int_\Theta f(\theta) p(\theta \mid \mathcal D) \mathrm d \theta,
 \end{equation*}
 %
-a quantity also termed the expectation value.
+a quantity also termed the \textit{expectation value}.
 If we were able to generate exact independent samples, 
 \begin{equation*}
   \theta^{(1)}, \theta^{(2)}, ..., \theta^{(n)} \overset{\mathrm{i.i.d}}{\sim} p(\theta \mid \mathcal D),
@@ -269,19 +269,20 @@ Then, provided the variance of $f$ is finite, the \textit{central limit theorem}
   \hat {\mathbb E} f \overset{\mathrm{approx}}{\sim} \mathrm{Normal} \left ( \mathbb E f, \frac{\mathrm{Var} f}{n} \right ).
 \end{equation*}
 %
-This is a powerful result for two reasons: first it tells us that our estimator is unbiased and more importantly that the expected error is driven by the variance of $f$ divided by our sample size, $n$.
+This is a powerful result for two reasons: first it tells us that our estimator is unbiased and more importantly that the expected squared error is driven by the variance of $f$ divided by our sample size, $n$.
+
+Unfortunately, estimates constructed with MCMC samples will, in general, neither be unbiased, nor will their variance decrease at rate $n$.
+For our estimators to be useful, we must therefore check that our samples are unbiased and then use a corrected central limit theorem.
 
 \subsubsection{Checking for bias with $\hat R$}
 
-An MCMC method, in general, will not verify these conditions.
 MCMC samples are biased for several reasons.
-First, the Markov chain is initialized at a point set by the modeler, not a point drawn from the posterior.
-The samples we generate are correlated to one another, meaning any sample will have some correlation to the starting point.
-If we run the algorithm for a long enough time, the correlation to the initial point becomes negligible and the chain ``forgets'' its starting point.
-But what is long enough?
+Perhaps the most obvious one is that Markov chains generate correlated samples, meaning any sample has some correlation with the initial point.
+If we run the algorithm for enough iterations, the correlation to the initial point becomes negligible and the chain ``forgets'' its starting point.
+But what constitutes enough iterations?
 It isn't hard to construct examples where removing the initial bias in any reasonable time is a hopeless endeavor \cite[e.g.][]{Margossian:2020b, Betancourt:2015}. 
 
-To identify this bias, we may run multiple Markov chains, each started at different points, and check that they all convergence to the same area.
+To identify this bias, we run multiple Markov chains, each started at different points, and check that they all convergence to the region of the parameter space.
 More precisely, we shouldn't be able to distinguish the Markov chains based on the samples alone.
 One way to check this is to compute the $\hat R$ statistics, for which we provide an intuitive definition:
 \begin{equation*}
@@ -295,25 +296,25 @@ We can also visually check that the chains are properly mixing using a trace plo
 \begin{figure}
   \begin{center}
   \includegraphics[width = 6in]{../figures/twocpt_traceplots_4x8.pdf}
-  \caption{Trace plots. \textit{The sampled values for each parameters are plotted against the iterations during the sampling phase. Multiple Markov chains were initialized at different points. However, once in the sampling phase, we cannot distinguish them, as shown by the ``fuzzy caterpillar'' shapes.}}
+  \caption{Trace plots. \textit{The sampled values for each parameters are plotted against the iterations during the sampling phase. Multiple Markov chains were initialized at different points. However, once in the sampling phase, we cannot distinguish them.}}
   \label{fig:trace}
   \end{center}
 \end{figure}
 
-If $\hat R \gg 1$ or if the chains were not mixing, this would be cause for concern and an invitation to adjust our inference method.
+If $\hat R \gg 1$ and, more generally, if the chains were not mixing, this would be cause for concern and an invitation to adjust our inference method.
 Even when $\hat R = 1$, we should entertain the possibility that all the chains suffer from the same bias.
 Stan offers additional diagnostics to identify sampling biases, notably by reporting \textit{divergent transitions} of the HMC sampler, a topic we will discuss when we fit more sophisticated models.
 
 \subsubsection{Controlling the variance of our estimator}
 
-Let us assume now that our samples are indeed unbiased.
+Let's assume that our samples are indeed unbiased.
 The expected error of our estimator is now determined by the variance.
-Under certain regularity conditions, our estimator follow an MCMC central limit theorem,
+Under certain regularity conditions, our estimator follows an MCMC central limit theorem,
 \begin{equation*}
   \hat {\mathbb E} f \overset{\mathrm{approx}}{\sim} \mathrm{Normal} \left ( \mathbb E f, \frac{\mathrm{Var} f}{n_\mathrm{eff}} \right ).
 \end{equation*}
 where the key difference is that $\mathrm{Var} f$ is now divided by the \textit{effective sample size}, $n_\mathrm{eff}$, rather than the sample size.
-This change accounts for the fact are samples are not independent: their correlation induces a loss in information, which increase the variance of our estimator.
+This change accounts for the fact our samples are not independent: their correlation induces a loss in information, which increase the variance of our estimator.
 For $CL$, we have 2,000 samples, but the effective sample size is 1,580 (Table~\ref{tab:summary}).
 If $n_\mathrm{eff}$ is low, our estimator may not be precise enough and we should generate more samples.
 
@@ -328,9 +329,9 @@ Both quantities are reported by Stan.
 Once we develop enough confidence in our inference, we still want to check our fitted model.
 There are many ways of doing this.
 We may look at the posterior distribution of an interpretable parameter and see if it suggests implausible values \cite[e.g][]{Gelman:1996}.
-Or we may evaluate at the models ability to perform a certain task, e.g. classification or prediction, as is often done in machine learning.
+Or we may evaluate the model's ability to perform a certain task, e.g. classification or prediction, as is often done in machine learning.
 In practice, we find it useful to do \textit{posterior predictive checks}, that is simulate data from the fitted model and compare the simulation to the observed data \cite[chapter 6]{Gelman:2013}.
-
+%
 Mechanically, the procedure is straightforward:
 \begin{enumerate}
   \item Draw the parameters from their posterior, $\tilde \theta \sim p(\theta \mid y).$
@@ -370,17 +371,17 @@ The corresponding posterior predictive checks are shown in Figure~\ref{fig:ppc_o
   \begin{center}
   \includegraphics[width=6in]{../figures/onecpt_ppc_4x8.pdf}
   \end{center}
-  \caption{Posterior predictive checks for one compartment model. \textit{The circles represent the observed data and the shaded areas the $50^\mathrm{th}$ and $90^\mathrm{th}$ credible intervals based on posterior draws. A graphical inspection suggests the credible interval is wider than for the one compartment model than they are for the two compartment model.}}
+  \caption{Posterior predictive checks for one compartment model. \textit{The circles represent the observed data and the shaded areas the $50^\mathrm{th}$ and $90^\mathrm{th}$ credible intervals based on posterior draws. A graphical inspection suggests the credible interval is wider for the one compartment model than they are for the two compartment model.}}
   \label{fig:ppc_onecpt} 
 \end{figure}
 
 There are several ways of comparing models and which method is appropriate crucially depends on the insights we wish to gain.
 If our goal is to asses a model's ability to make good out-of-sample predictions, we may consider \textit{Bayesian leave-one-out} (LOO) cross validation.
 The premise of cross-validation is to exclude a point, $(y_i, x_i)$, from the \textit{training set}, i.e. the set of data to which we fit the model.
-Here $x_i$ denote the covariate and in our example, the relevant row in the event schedule.
-We denote this reduced data set, $y_{-i}$.
+Here $x_i$ denotes the covariate and in our example, the relevant row in the event schedule.
+We denote the reduced data set, $y_{-i}$.
 We then generate a prediction $(\tilde y_i, x_i)$ using the fitted model, and compare $\tilde y_i$ to $y_i$.
-One metric to make this comparison is the squared error, $(\tilde y_i - y_i)^2$.
+A classic metric to make this comparison is the squared error, $(\tilde y_i - y_i)^2$.
 
 Another approach is to use the \textit{LOO estimate of out-of-sample predictive fit}:
 \begin{equation*}
@@ -410,7 +411,7 @@ for (i in 1:nObs)
     normal_lpdf(logCObs[i] | log(concentrationObs[i]), 
                 sigma);
 \end{lstlisting}
-These results can be extracted and fed into Loo to compute $\mathrm{elp}_\mathrm{loo}$.
+These results can then be extracted and fed into Loo to compute $\mathrm{elp}_\mathrm{loo}$.
 The file \texttt{twoCpt.r} in the Supplementary Material shows exactly how to do this.
 Figure~\ref{fig:loo} plots the estimated $\mathrm{elp}_\mathrm{loo}$, along with a standard deviation, and shows the two compartment model has better out-of-sample predictive capabilities.
 
