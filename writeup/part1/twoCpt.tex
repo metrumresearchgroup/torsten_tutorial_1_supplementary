@@ -39,16 +39,35 @@ During the trial, the patient receives a dose of 1,200 mg every 12 hours, until 
 Measurements are taken shortly after the first, second, and last doses, and at regular intervals during the treatment.
 Both intervention and measurement events are described by the event schedule, which follows the convention established by NONMEM.
 This means the user must provide for each event the following variables: \texttt{cmt}, \texttt{evid}, \texttt{addl}, \texttt{ss}, \texttt{amt}, \texttt{time}, \texttt{rate}, and \texttt{ii}.
-Appendix~\ref{app:event} reviews the role of each variable.
+Table~\ref{tab:event_schedule} provides an overview of the roll of each variable and more details can be found in the \textit{Torsten User Manual}.
+
+\begin{table}
+  \renewcommand{\arraystretch}{1.5}
+  \begin{center}
+  \begin{tabular} {l l l}
+  \rowcolor[gray]{0.95} \textbf{Variable} & \textbf{Description} \\
+  \texttt{cmt} & Compartment in which event occurs.\\
+  \rowcolor[gray]{0.95} \texttt{evid} & Type of event: (0) measurement, (1) dosing. \\
+  \texttt{addl} & For dosing events, number of additional doses.  \\
+  \rowcolor[gray]{0.95} \texttt{ss} & Steady state indicator: (0) no, (1) yes. \\
+  \texttt{amt} & Amount of drug administered. \\
+  \rowcolor[gray]{0.95} \texttt{time} & Time of the event. \\
+  \texttt{rate} & For dosing by infusion, rate of infusion. \\
+  \rowcolor[gray]{0.95} \texttt{ii} & For events with multiple dosing, inter-dose interval.
+  \end{tabular}
+  \end{center}
+  \caption{Available variables in Torsten to specify an event schedule.}
+  \label{tab:event_schedule}
+\end{table}
 
 \subsection{Statistical model}
 
 % We define a generative model.
-Given a treatment, $x$, and the physiological parameters, $\{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri} \}$, we obtain the exact drug plasma concentration, $c$, by solving the relevant ODE.
+Given a treatment, $x$, and the physiological parameters, $\{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri} \}$, we obtain the exact drug plasma concentration, $c$, by solving the relevant ODEs.
 Our measurements, $y$, are a perturbation of $c$ because of our measurement error.
 We model this error using a lognormal error, that is
 \begin{equation*}
-  \log y \sim \mathrm{Normal}(\log c, \sigma^2),
+  \log y \mid c, \sigma \sim \mathrm{Normal}(\log c, \sigma^2),
 \end{equation*}
 where $\sigma$ is a standard deviation we wish to estimate.
 The deterministic computation of $c$ along with the measurement model, defines our likelihood function $p(y \mid \theta, x)$, where $\theta = \{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri}, \sigma \}$.
@@ -86,7 +105,7 @@ For each variable we introduce, we must declare a type and, for containers such 
 In addition, each statement ends with a semi-colon.
 It is possible to specify constraints on the parameters, using the keywords \texttt{lower} and \texttt{upper}.
 If one of these constraints is violated, Stan returns an error message.
-More importantly, parameters are transformed into unconstrained parameters -- for instance, positive variables are put on the log scale -- which greatly improves computation.
+More importantly, constrained parameters are transformed into unconstrained parameters -- for instance, positive variables are put on the log scale -- which greatly improves computation.
 
 \begin{lstlisting}[style=stan, numbers=none] 
   data {
@@ -124,12 +143,12 @@ More importantly, parameters are transformed into unconstrained parameters -- fo
 Next, the \texttt{model} block allows us to modify the variable \texttt{target}, which Stan recognizes as the log joint distribution.
 The following statement increments \texttt{target} using the prior on $\sigma$, which is a normal density, truncated at 0 to only put mass on positive values.
 \begin{lstlisting}
-  target += normal_lpdf(sigma | 0, 1);
+target += normal_lpdf(sigma | 0, 1);
 \end{lstlisting}
 The truncation is implied by the fact $\sigma$ is declared as lower-bounded by 0 in the parameters block.
 An alternative syntax is the following:
 \begin{lstlisting}
-  sigma ~ normal(0, 1);
+sigma ~ normal(0, 1);
 \end{lstlisting}
 This statement now looks like our statistical formulation and makes the code more readable.
 But we should be mindful that this is not a sampling statement, rather instructions on how to increment \texttt{target}.
@@ -153,7 +172,7 @@ The likelihood statement involves terms which we have not defined yet, notably \
 These variables are transformations of the data and the parameters,
 and motivate two additional blocks.
 
-\subsubsection{Transformed data and transformed parameters block}
+\subsubsection{Transformed data and transformed parameters block} \label{sec:twocpt_transformed_parameters}
 
 In \texttt{transformed data}, we can construct variables which only depend on the data.
 For example,
@@ -166,13 +185,14 @@ For example,
 \end{lstlisting}
 We also specify the number of compartments in our model (including the gut), \texttt{nCmt}, and the numbers of physiological parameters, \texttt{nTheta}, which will come in handy shortly.
 Because the data is fixed, this operation is only computed once.
-By contrast, operations in the \texttt{transformed parameters} block need to be performed for each new parameter values.
+By contrast, operations in the \texttt{transformed parameters} block need to be performed (and differentiated) for each new parameter values.
 
 To compute \texttt{concentrationObs} we need to solve the relevant ODE within the clinical event schedule.
-Torsten provides a function which returns the drug mass in each compartment at each time point in the event schedule.
+Torsten provides a function which returns the drug mass in each compartment at each time point of the event schedule.
 \begin{lstlisting}
-  matrix<lower = 0>[nCmt, nEvent] mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, 
-                    addl, ss, theta);
+matrix<lower = 0>[nCmt, nEvent] 
+  mass = pmx_solve_twocpt(time, amt, rate, ii, evid,
+                          cmt, addl, ss, theta);
 \end{lstlisting}
 %
 The first eight arguments define the event schedule and the last argument, \texttt{theta}, is an array containing the physiological parameters, and defined as follows:
@@ -180,10 +200,12 @@ The first eight arguments define the event schedule and the last argument, \text
   real theta[nTheta] = {CL, Q, VC, VP, ka};
 \end{lstlisting}
 %
+It is also possible to have \texttt{theta} change between events, and specify lag times and bio-availibilities fractions, although we will not take advantage of these features in the example at hand.
+
 The Torsten function we have chosen to use solves the ODEs analytically.
-Other routines use a matrix exponential, a numerical solver, or a combination of methods \cite{Margossian:2017}.
+Other routines use a matrix exponential, a numerical solver, or a combination of analytical and numerical methods \cite{Margossian:2017}.
 It now remains to compute the concentration in the central compartment at the relevant times.
-The full \texttt{transformed parameters} block is then:
+The full \texttt{transformed parameters} block is as follows:
 \begin{lstlisting}
 transformed parameters {
   real theta[nTheta] = {CL, Q, VC, VP, ka};
@@ -194,13 +216,15 @@ transformed parameters {
   mass = pmx_solve_twocpt(time, amt, rate, ii, evid, 
                           cmt, addl, ss, theta);
 
+  // Extract mass in central compartment and divide 
+  // by central volume.
   concentration = mass[2, ] ./ VC;
   concentrationObs = concentration[iObs];
 }  
 \end{lstlisting} 
 
 The Stan file contains all the coding blocks in the following order: \texttt{data}, \texttt{transformed data}, \texttt{parameters}, \texttt{transformed parameters}, \texttt{model}.
-Appendix~\ref{app:name} provides the full Stan code.
+The full Stan code can be found in the Supplementary Material.
 
 \subsection{Calling Stan from R}
 
@@ -212,19 +236,19 @@ The first step is to ``transpile'' the file -- call it \texttt{twocpt.stan} --, 
 mod <- cmdstan_model("twocpt.stan")
 \end{lstlisting}
 %
-We can then run Stan's HMC sampler by passing in the requisite data and providing other tuning parameters,
-such as the number of sampling and warmup iterations, and the number of Markov chains we run.
+We can then run Stan's HMC sampler by passing in the requisite data and providing other tuning parameters.
+Here: (i) the number of Markov chains (which we run in parallel), (ii) the initial value for each chain, (iii) the number of warmup iterations, and (iv) the number of sampling iterations.
 \begin{lstlisting}
 fit <- mod$sample(data = data, chains = n_chains,
-                  init = init,
                   parallel_chains = n_chains,
+                  init = init,
                   iter_warmup = 500, 
                   iter_sampling = 500)
 \end{lstlisting}
 %
 There are several other arguments we can pass to the sampler and which we will take advantage of throughout the tutorial.
-For applications in pharmacometrics, we recommend specifying the initial starting points via the \texttt{init} argument.
-In this in future examples, we will draw the initial points from their priors, by defining an appropriate R function.
+For applications in pharmacometrics, we recommend specifying the initial starting points via the \texttt{init} argument, as the defaults may not be appropriate.
+In this tutorial, we draw the initial points from their priors by defining an appropriate R function.
 
 The resulting \texttt{fit} object stores the samples generated by HMC from which can deduce the sample mean, sample variance, and sample quantiles of our posterior distribution.
 This information is readily accessible using \texttt{fit\$summary()} and summarized in table~\ref{tab:summary}.
@@ -234,7 +258,12 @@ We could also extract the samples and perform any number of operations on them.
   \renewcommand{\arraystretch}{1.5}
   \begin{tabular}{l l l l l l l l l l}
   \rowcolor[gray]{0.95} & \bf mean & \bf median & \bf sd & \bf mad & \bf q5 & \bf q95 & $\bf \hat R$ & \bf ESS$_\mathrm{bulk}$ & \bf ESS$_\mathrm{tail}$ \\
-$CL$    &    10.0  &  10.0  &  0.378  & 0.367 &  9.39 &  10.6  &  1.00   & 1580  &  1348 \\\rowcolor[gray]{0.95} $Q$      &  19.8    & 19.5  &  4.00  &  4.01 &  13.8  &   26.8 &   1.00  &   985 &    1235 \\$V_\mathrm{cent}$   &   41.2  &  40.8 &   9.71   & 9.96  & 25.6 &   57.7   & 1.00   &  732  &  1120 \\\rowcolor[gray]{0.95} $V_\mathrm{peri}$    &  124 &   123 &    18.0  &  18.0 &    97.1 &  155 &   1.00  &  1877 &    1279 \\$k_a$       &  1.73   & 1.67 &  0.523  & 0.522   & 1.01 &   2.68 &   1.00   &  762 &    1108 \\\rowcolor[gray]{0.95} $\sigma$   & 0.224 &   0.222 &  0.0244 &  0.0232 &  0.187 &   0.269 &  1.01  & 1549 &   1083
+$CL$    &    10.0  &  10.0  &  0.378  & 0.367 &  9.39 &  10.6  &  1.00   & 1580  &  1348 \\
+\rowcolor[gray]{0.95} $Q$      &  19.8    & 19.5  &  4.00  &  4.01 &  13.8  &   26.8 &   1.00  &   985 &    1235 \\
+$V_\mathrm{cent}$   &   41.2  &  40.8 &   9.71   & 9.96  & 25.6 &   57.7   & 1.00   &  732  &  1120 \\
+\rowcolor[gray]{0.95} $V_\mathrm{peri}$    &  124 &   123 &    18.0  &  18.0 &    97.1 &  155 &   1.00  &  1877 &    1279 \\
+$k_a$       &  1.73   & 1.67 &  0.523  & 0.522   & 1.01 &   2.68 &   1.00   &  762 &    1108 \\
+\rowcolor[gray]{0.95} $\sigma$   & 0.224 &   0.222 &  0.0244 &  0.0232 &  0.187 &   0.269 &  1.01  & 1549 &   1083
   \end{tabular}
   \caption{Summary of results when fitting a two compartment model. \textit{The first columns return sample estimates of the posterior mean, median, standard deviation, median absolute deviation, $5^\mathrm{th}$ and $95^\mathrm{th}$ quantiles, based on our approximate samples.
   The next three columns return the $\hat R$ statistics and the effective sample size for bulk and tail estimates, and can be used to identify problems with our inference.}}
@@ -248,6 +277,9 @@ We can however make sure that certain necessary conditions do not break.
 Much of the MCMC literature focuses on estimating expectation values, and we will use these results to develop some intuition.
 
 \subsubsection{Central limit theorem}
+
+Many common MCMC concepts, such as effective sample size, are amiable to intuitive interpretations.
+But to really grasp their meaning and take advantage of them, we must examine them in the context of central limit theorems.
 
 For any function $f$ of our latent parameters $\theta$, we define the posterior mean to be
 \begin{equation*}
@@ -280,9 +312,9 @@ MCMC samples are biased for several reasons.
 Perhaps the most obvious one is that Markov chains generate correlated samples, meaning any sample has some correlation with the initial point.
 If we run the algorithm for enough iterations, the correlation to the initial point becomes negligible and the chain ``forgets'' its starting point.
 But what constitutes enough iterations?
-It isn't hard to construct examples where removing the initial bias in any reasonable time is a hopeless endeavor \cite[e.g.][]{Margossian:2020b, Betancourt:2015}. 
+It isn't hard to construct examples where removing the initial bias in any reasonable time is a hopeless endeavor. 
 
-To identify this bias, we run multiple Markov chains, each started at different points, and check that they all convergence to the region of the parameter space.
+To identify this bias, we run multiple Markov chains, each started at different points, and check that they all convergence to the same region of the parameter space.
 More precisely, we shouldn't be able to distinguish the Markov chains based on the samples alone.
 One way to check this is to compute the $\hat R$ statistics, for which we provide an intuitive definition:
 \begin{equation*}
@@ -324,7 +356,7 @@ We may also be interested in tail quantities, such as extreme quantiles, which a
 This is to be distinguished from the traditional effective sample size, henceforth the \textit{bulk effective sample size}.
 Both quantities are reported by Stan.
 
-\subsection{Checking the model: posterior predictive checks}
+\subsection{Checking the model: posterior predictive checks}  \label{sec:twoCpt_ppc}
 
 Once we develop enough confidence in our inference, we still want to check our fitted model.
 There are many ways of doing this.
@@ -343,10 +375,10 @@ The uncertainty due to our estimation and the uncertainty due to our measurement
 Stan provides a \texttt{generated quantities} block, which allows us to compute values, based on sampled parameters.
 In our two compartment model example, the following code draws new observations from the likelihood:
 \begin{lstlisting}
-  generated quantities {
-    real concentrationObsPred[nObs] 
-      = exp(normal_rng(log(concentrationObs), sigma));
-  }
+generated quantities {
+  real concentrationObsPred[nObs] 
+    = exp(normal_rng(log(concentrationObs), sigma));
+}
 \end{lstlisting}
 %
 Here, we generated predictions at the observed points for each sampled point, $\theta^{(i)}$.
