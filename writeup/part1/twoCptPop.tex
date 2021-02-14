@@ -2,7 +2,7 @@
 We now consider the scenario where we have data from multiple patients and fit a population model.
 Population models are a powerful tool to capture the heterogeneity between patients, while also recognizing similarities.
 Building the right prior allows us to pool information between patients, the idea being that what we learn from one patient teaches us something -- though not everything -- about the other patients.
-In practice, such models can frustrate inference algorithms and need to be implemented with care \citep[e.g.][]{Betancourt:2013}.
+In practice, such models can frustrate inference algorithms and need to be implemented with care \cite[e.g.][]{Betancourt:2013}.
 We start with an example where the interaction between the model and our MCMC sampler is well behaved.
 In Part II of this tutorial, we will examine a more difficult case, for which we will leverage Stan's diagnostic capabilities in order to run reliable inference.
 

@@ -85,8 +85,7 @@ In this simulated example, our priors for the individual parameters are based on
   \sigma & \sim & \mathrm{Half-Normal}(0, 1); \\
 \end{eqnarray*}
 
-
-Suggestions for building priors can be found in references \cite{Gabry:2017, Betancourt:2020, author:0000}.
+Suggestions for building priors can be found in references \cite{Gabry:2019, Betancourt:2020} and at \url{https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations}.
 
 \subsection{Specifying a model in Stan}
 
@@ -360,7 +359,7 @@ Both quantities are reported by Stan.
 
 Once we develop enough confidence in our inference, we still want to check our fitted model.
 There are many ways of doing this.
-We may look at the posterior distribution of an interpretable parameter and see if it suggests implausible values \cite[e.g][]{Gelman:1996}.
+We may look at the posterior distribution of an interpretable parameter and see if it suggests implausible values.
 Or we may evaluate the model's ability to perform a certain task, e.g. classification or prediction, as is often done in machine learning.
 In practice, we find it useful to do \textit{posterior predictive checks}, that is simulate data from the fitted model and compare the simulation to the observed data \cite[chapter 6]{Gelman:2013}.
 %
@@ -433,7 +432,7 @@ and correct this value, using importance sampling, to estimate $\log p(y_i \mid 
 Naturally this estimator may be inaccurate.
 What makes this tool so useful is that we can use the Pareto shape parameter, $\hat k$, to asses how reliable the estimate is.
 In particular, if $\hat k > 0.7$, then the estimate shouldn't be trusted.
-The estimator is implemented in the R package Loo \cite{author:0000}.
+The estimator is implemented in the R package Loo \cite{Gabry:2020}.
 
 Conveniently, we can compute $\log p(y_i \mid y)$ in Stan's \texttt{generated quantities} block.
 \begin{lstlisting}
