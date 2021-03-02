@@ -10,7 +10,7 @@ There also exist more general probabilistic languages such as, to only name a fe
 Stan supports a rich library of probability densities, matrix operations and numerical solvers for differential equations.
 These features make for a rich and flexible language, however writing common pharmacometrics models can be tedious.
 Torsten extends Stan by providing a suite of functions to facilitate the specification of pharmacometrics models.
-These functions make it straightforward to model the event schedule of a clinical trial and parallelize computation across patients.
+These functions make it straightforward to model the event schedule of a clinical trial and parallelize computation across patients for population models.
 % and also provide analytical solutions for ordinary differential equations (ODEs) which commonly arise in the field.
 
 
@@ -18,13 +18,17 @@ These functions make it straightforward to model the event schedule of a clinica
 
 We believe that Stan, coupled with Torsten, can be an important addition to the pharmacometrician's toolkit, especially for Bayesian data analysis.
 
-The most obvious strength of Stan is its flexibility: it is straightforward to specify priors, systems of ODEs, a broad range of measurement models, missing data models and hierarchies.
+The most obvious strength of Stan is its flexibility: it is straightforward to specify priors, systems of ODEs, a broad range of measurement models, missing data models and hierarchies (i.e. population models).
 Because of this flexibility, various data sources and their corresponding measurement models can be combined into one large model, over which full Bayesian inference can be performed \cite[e.g][]{Weber:2018}.
+There are not many examples in pharmacometrics where the flexibility of Stan would be fully utilized, but we believe this is in part because such tools were not readily available to pharmacometricians in the past.
+The richness of the Stan language could well open the gate to new types of models.
 
-Secondly, Stan offers efficient inference algorithms, most notably its adaptive \textit{Hamiltonian Monte Carlo} sampler, a gradient-based Markov chains Monte Carlo algorithm \cite{Betancourt:2018, Hoffman:2014}, automatic differentiation variational inference \cite{author:0000}, and penalized maximum likelihood estimators.
-Stan's inference algorithms are supported by a state-of-the-art automatic differentiation library, which efficiently generates the requisite derivatives \cite{Carpenter:2015}.
+Secondly, Stan supports state of the art inference algorithms, most notably its adaptive \textit{Hamiltonian Monte Carlo} sampler, a gradient-based Markov chains Monte Carlo algorithm \citep{Betancourt:2018} based on the No U-Turn sampler (NUTS) \cite{Hoffman:2014}, automatic differentiation variational inference (ADVI) \cite{Kucukelbir:2017}, and penalized maximum likelihood estimators.
+Stan's inference algorithms are supported by a cutting edge automatic differentiation library, which efficiently generates the requisite derivatives \cite{Carpenter:2015}.
+It is worth pointing out that algorithms, such as NUTS and ADVI, were first developed and implemented in Stan, before being widely adopted by the applied statistics and machine learning communities.
+As of the writing of this article, new inference algorithms continue to be prototyped in Stan such as, to take a few recent examples, adjoint-differentiated Laplace approximations \cite{Margossian:2020}, cross-chain warmup \cite{Zhang:2020}, and path finding for improved chain initialization\footnote{Personal communication with the Stan development team.}.
 
-Thirdly, Stan runs many diagnostics -- including the detection of divergent transitions \cite{Betancourt:2018}, and the improved computation of effective sample sizes and scale reduction factors, $\hat R$ \cite{Vehtari:2020}, and more -- and gives detailed warning messages.
+Thirdly, Stan runs many \textit{many} diagnostics -- including the detection of divergent transitions \cite{Betancourt:2018}, and the improved computation of effective sample sizes and scale reduction factors, $\hat R$ \cite{Vehtari:2020}, and more -- and gives detailed warning messages.
 This makes it considerably easier to identify issues with our inference and our models.
 Several of these tools improve commonly used diagnostics which may not detect important problems, in which case our inference fails without us realizing it.
 Stan fails better: it fails loudly. 
@@ -47,7 +51,7 @@ The joint distribution observes a convenient decomposition,
 with $p(\theta)$ the \textit{prior} distribution and $p(\mathcal D \mid \theta)$ the \textit{likelihood}.
 The prior encodes information about the parameters, usually based on scientific expertise or results from previous analysis.
 % It is a potent tool to encode prior knowledge -- hence the name -- or lack thereof using a probabilistic statement.
-The likelihood tells us how the data is distributed for a fixed parameter value and, per one interpretation, can be thought of as a ``story of how the data is generated'' \cite{Gelman:2013}.
+The likelihood tells us how the data is distributed for a fixed parameter value and, per one interpretation, can be thought of as a ``story of how the data is generated'' \cite{Gelman:2013b}.
 %
 The Bayesian proposition is to base our inference on the \textit{posterior} distribution, $p(\theta \mid \mathcal D)$.
 % This posterior density describes how consistent various parameter values are with the model and the data.
@@ -62,35 +66,35 @@ There is no such thing as ``computing the posterior distribution''.
 We cannot even numerically evaluate the posterior density at any particular point!
 Instead we must probe the posterior distribution and learn the characteristics that interest us the most.
 In our experience, this often includes a measure of a central tendency and a quantification of uncertainty, for example the mean and the variance, or the median and the $5^\mathrm{th}$ and $95^\mathrm{th}$ quantiles.
-For skewed or multimodal distributions, we may want a more refine analysis which looks at many quantiles.
+For skewed or multimodal distributions, we may want a more refined analysis which looks at many quantiles.
 What we compute are estimates of these quantities.
 One strategy is to generate \textit{approximate} samples from the posterior distribution and then use sample mean, sample variance, and sample quantiles as our estimators.
 
 Bayes' rule teaches us that
 \begin{equation*}
-  p(\theta \mid \mathcal D) = \frac{p(\mathcal D \mid \theta) p(\theta)}{p(\mathcal D)}.
+  p(\theta \mid \mathcal D) = \frac{p(\mathcal D, \theta)}{p(\mathcal D)} =  \frac{p(\mathcal D \mid \theta) p(\theta)}{p(\mathcal D)}.
 \end{equation*}
-Typically we can evaluate the joint density in the nominator but not the normalizing constant in the denominator.
+Typically we can evaluate the joint density in the nominator but not the normalizing constant, $p(\mathcal D)$, in the denominator.
 %
-A useful method must therefore be able to generate samples using the \textit{unnormalized} posterior density.
+A useful method must therefore be able to generate samples using the \textit{unnormalized} posterior density, $p(\mathcal D, \theta)$.
 Many Markov chains Monte Carlo (MCMC) algorithms are designed to do exactly this.
 Starting at an initial point, these chains explore the parameter space, $\Theta$, one iteration at a time, to produce the desired samples.
 % A classic example is the Metropolis-Hastings algorithm, which generates samples using a random walk across $\Theta$ \cite{Metropolis:1953; Hastings:1970}.
 % Unfortunately, this behavior scales poorly with the dimension of $\theta$, making it difficult to obtain representative samples.
 % This behavior is exacerbated by the geometry of the posterior density that arises, for instance, in population models.
 %
-Hamiltonian Monte Carlo (HMC) is an MCMC method which uses the gradient to efficiently move across the parameter space \cite{Neil:2012; Betancourt:2018}.
+Hamiltonian Monte Carlo (HMC) is an MCMC method which uses the gradient to efficiently move across the parameter space \cite{Neal:2012, Betancourt:2018}.
 Computationally, running HMC requires evaluating $\log p(\mathcal D, \theta)$ and $\nabla_\theta \log p(\mathcal D, \theta)$ many times across $\Theta$, i.e. for varying values of $\theta$ but fixed values of $\mathcal D$.
 For this procedure to be well-defined, $\theta$ must be a continuous variable, else the requisite gradient does not exist.
 Discrete parameters require a special treatment, which we will not discuss in this tutorial.
 
 A Stan program specifies a method to evaluate $\log p(\mathcal D, \theta)$.
-Thanks to automatic differentiation, this implicitly defines a procedure to compute $\nabla_\theta \log p(\mathcal D, \theta)$.
+Thanks to automatic differentiation, this implicitly defines a procedure to compute $\nabla_\theta \log p(\mathcal D, \theta)$ \cite{Griewank:2008, Baydin:2018, Margossian:2019}.
 Together, these two objects provide all the relevant information about our model to run HMC sampling and other gradient-based inference algorithms.
 
 \subsection{Bayesian workflow}
 
-Bayesian inference is only one step of a broader modeling process, which we might call the Bayesian workflow \cite{Betancourt:2018, Gelman:2020}.
+Bayesian inference is only one step of a broader modeling process, which we might call the Bayesian workflow \cite{Betancourt:2018, Gabry:2019, Gelman:2020}.
 Once we fit the model, we need to check the inference and if needed, fine tune our algorithm, or potentially change method.
 And once we trust the inference, we naturally need to check the fitted model.
 Our goal is to understand the shortcomings of our model and motivate useful revisions.
@@ -104,7 +108,7 @@ Detailed instructions on installing Stan and Torsten can be found on \url{https:
 At its core, Stan is a C++ library but it can be interfaced with one of many scripting languages, including R, Python, and Julia.
 We will use cmdStanR, which is a lightweight wrapper of Stan in R, and
 % While RStan is compatible with Torsten and a popular option for R users, its development lags a little behind that of Stan.
-in addition, the packages Posterior \cite{author:0000} BayesPlot \cite{author:0000}, and Loo \cite{author:0000}.
+in addition, the packages Posterior \cite{Bukner:2020} BayesPlot \cite{Gabry:2021}, and Loo \cite{Gabry:2020}.
 
 The R and Stan code for all the examples are available at \url{link}.
 
@@ -116,11 +120,10 @@ The R and Stan code for all the examples are available at \url{link}.
  Exposure to Bayesian statistics and inference algorithms is desirable, in particular an elementary understanding of standard MCMC methods.
  We expect the reader to know R but we don't assume any background in Stan.
  
- Helpful reads include the \textit{Stan User Manual} \cite{author:0000} and the \textit{Torsten User Manual} \cite{author:0000}.
+ Helpful reads include the \textit{Stan User Manual} \cite{Stan:2021} and the \textit{Torsten User Manual} \cite{Torsten:2021}.
  A comprehensive textbook on Bayesian modeling is \textit{Bayesian Data Analysis} by Gelman et al (2013) \cite{Gelman:2013b}, with more recent insights on the Bayesian workflow provided by Gelman et al (2020) \cite{Gelman:2020}. 
  Betancourt (2018) offers an accessible discussion on MCMC methods, with an emphasis on HMC \cite{Betancourt:2018}.
- We will discuss in the conclusion additional readings which can complement this tutorial.
-  
- 
+ % We will discuss in the conclusion additional readings which can complement this tutorial.
+   
  
  
