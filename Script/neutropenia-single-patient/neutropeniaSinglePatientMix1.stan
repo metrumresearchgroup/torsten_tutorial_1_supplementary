@@ -1,37 +1,31 @@
 functions{
-  real[] twoCptNeutModelODE(real t,
-			    real[] x,
-			    real[] x2cpt,
-			    real[] parms,
-			    real[] rdummy,
-			    int[] idummy){
-    real CL = parms[1];
-    real Q = parms[2];
-    real V1 = parms[3];
-    real V2 = parms[4];
-    real ka = parms[5];
-    real mtt= parms[6];
-    real circ0 = parms[7];
-    real gamma = parms[8];
-    real alpha = parms[9];
-    real ktr = 4 / mtt;
-    real dxdt[5];
-    real conc = x2cpt[2] / V1;
-    real EDrug = fmin(1.0, alpha * conc);
-    real prol = x[1] + circ0;
-    real transit1 = x[2] + circ0;
-    real transit2 = x[3] + circ0;
-    real transit3 = x[4] + circ0;
-    real circ = fmax(machine_precision(), x[5] + circ0);
-  
-    // x[1], x[2], x[3], x[4] and x[5] are differences from circ0.
-    dxdt[1] = ktr * prol * ((1 - EDrug) * ((circ0 / circ)^gamma) - 1);
-    dxdt[2] = ktr * (prol - transit1);
-    dxdt[3] = ktr * (transit1 - transit2);
-    dxdt[4] = ktr * (transit2 - transit3);
-    dxdt[5] = ktr * (transit3 - circ);
+  real[] FK_ODE(real t, real[] y, real[] y_pk, real[] theta, real[] rdummy, int[] idummy){
+    /* PK variables */
+    real V1 = theta[3];
 
-    return dxdt;
+    /* PD variable */
+    real mtt      = theta[6];
+    real circ0    = theta[7];
+    real alpha    = theta[8];
+    real gamma    = theta[9];
+    real ktr      = 4.0 / mtt;
+    real prol     = y[1] + circ0;
+    real transit1 = y[2] + circ0;
+    real transit2 = y[3] + circ0;
+    real transit3 = y[4] + circ0;
+    real circ     = fmax(machine_precision(), y[5] + circ0);
+    real conc     = y_pk[2] / V1;
+    real EDrug    = alpha * conc;
+
+    real dydt[5];
+
+    dydt[1] = ktr * prol * ((1 - EDrug) * ((circ0 / circ)^gamma) - 1);
+    dydt[2] = ktr * (prol - transit1);
+    dydt[3] = ktr * (transit1 - transit2);
+    dydt[4] = ktr * (transit2 - transit3);
+    dydt[5] = ktr * (transit3 - circ);
+
+    return dydt;
   }
 }
 
@@ -65,6 +59,9 @@ data{
   real<lower = 0> gammaPriorCV;
   real<lower = 0> alphaPrior;
   real<lower = 0> alphaPriorCV;
+
+  real<lower = 0> rtol;
+  real<lower = 0> atol;
 }
 
 transformed data{
@@ -74,9 +71,10 @@ transformed data{
   int<lower = 0> ss[nt] = rep_array(0, nt);
   vector[nObsPK] logCObs = log(cObs);
   vector[nObsPD] logNeutObs = log(neutObs);
-  int<lower = 1> nCmt = 8;
-  real F[nCmt] = rep_array(1.0, nCmt);
-  real tLag[nCmt] = rep_array(0.0, nCmt);
+  int nOde = 5;
+  int<lower = 1> nCmt = nOde + 3;
+  real biovar[nCmt] = rep_array(1.0, nCmt);
+  real tlag[nCmt] = rep_array(0.0, nCmt);
 }
 
 parameters{
@@ -98,23 +96,21 @@ parameters{
 
 transformed parameters{
   vector[nt] cHat;
-  vector[nObsPK] cHatObs;
+  vector<lower = 0>[nObsPK] cHatObs;
   vector[nt] neutHat;
-  vector[nObsPD] neutHatObs;
-  matrix[8, nt] x;
+  vector<lower = 0>[nObsPD] neutHatObs;
+  matrix[nCmt, nt] x;
   real<lower = 0> parms[9];
 
   parms = {CL, Q, V1, V2, ka, mtt, circ0, gamma, alpha};
 
-  x = pmx_solve_twocpt_rk45(twoCptNeutModelODE, 5,
-                            time, amt, rate, ii, evid, cmt, addl, ss,
-                            parms, F, tLag, 1e-6, 1e-6, 1e4);
+  x = pmx_solve_twocpt_rk45(FK_ODE, nOde, time, amt, rate, ii, evid, cmt, addl, ss, parms, biovar, tlag, rtol, atol, 1e4);
 
   cHat = x[2, ]' / V1;
   neutHat = x[8, ]' + circ0;
 
-  cHatObs = cHat[iObsPK]; // predictions for observed data records  }
-  neutHatObs = neutHat[iObsPD]; // predictions for observed data records
+  cHatObs    = cHat[iObsPK];
+  neutHatObs = neutHat[iObsPD];
 }
 
 model{

@@ -13,8 +13,8 @@ tabDir <- file.path(projectDir, "deliv", "table", modelName)
 dataDir <- file.path(projectDir, "data", "derived")
 modelDir <- projectDir
 outDir <- file.path(modelDir, modelName)
-## toolsDir <- file.path(scriptDir, "tools")
 
+## additional packages
 .libPaths("~/.R/R_libs")
 
 library("cmdstanr")
@@ -25,12 +25,12 @@ library(bayesplot)
 theme_set(theme_gray())
 library(tidyverse)
 library(parallel)
-## source(file.path(toolsDir, "stanTools.R"))
-## source(file.path(toolsDir, "functions.R"))
 
 options(mc.cores = parallel::detectCores())
 
 set.seed(10271998) ## not required but assures repeatable results
+
+set_cmdstan_path("../../Torsten/cmdstan")
 
 ################################################################################################
 ### Simulate ME-2 plasma concentrations and ANC values
@@ -195,7 +195,9 @@ data <- with(xdata,
                   gammaPrior = gammaPrior,
                   gammaPriorCV = gammaPriorCV,
                   alphaPrior = alphaPrior,
-                  alphaPriorCV = alphaPriorCV
+                  alphaPriorCV = alphaPriorCV,
+                  rtol = 1.e-4,
+                  atol = 1.e-6
                   ))
 
 ### create initial estimates
@@ -234,24 +236,16 @@ parameters <- c(parametersToPlot, otherRVs)
 ################################################################################################
 # run Stan
 
-nChains <- 4
-nPost <- 500 ## Number of post-burn-in samples per chain after thinning
-nBurn <- 500 ## Number of burn-in samples per chain after thinning
-nThin <- 1
-
-nIter <- (nPost + nBurn) * nThin
-nBurnin <- nBurn * nThin
-
 mod.fit <- cmdstan_model(file.path(modelDir, paste(modelName, ".stan", sep = "")), quiet=FALSE)
 fit <- mod.fit$sample(data = data,
                       iter_sampling = 500,
-                      iter_warmup = 1000,
+                      iter_warmup = 800,
                       thin = 1,
                       init = init,
                       chains = 4,
                       cores = 4,
                       refresh = 10,
-                      adapt_delta = 0.90, step_size = 0.01)
+                      adapt_delta = 0.80, step_size = 0.1)
 
 dir.create(outDir)
 save(fit, file = file.path(outDir, paste(modelName, "Fit.Rsave", sep = "")))
