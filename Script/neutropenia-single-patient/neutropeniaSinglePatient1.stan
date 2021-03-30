@@ -1,9 +1,5 @@
-functions{
-  real[] twoCptNeutModelODE(real t,
-			    real[] x,
-			    real[] parms,
-			    real[] rdummy,
-			    int[] idummy){
+functions {
+  real[] twoCptNeutModelODE(real t, real[] x, real[] parms, real[] rdummy, int[] idummy){
     real CL = parms[1];
     real Q = parms[2];
     real V1 = parms[3];
@@ -71,6 +67,9 @@ data{
   real<lower = 0> gammaPriorCV;
   real<lower = 0> alphaPrior;
   real<lower = 0> alphaPriorCV;
+  real<lower = 0> rtol;
+  real<lower = 0> atol;
+  int<lower = 0> max_num_step;
 }
 
 transformed data{
@@ -112,14 +111,12 @@ transformed parameters{
 
   parms = {CL, Q, V1, V2, ka, mtt, circ0, gamma, alpha};
 
-  x = pmx_solve_rk45(twoCptNeutModelODE, 8,
-                     time, amt, rate, ii, evid, cmt, addl, ss,
-                     parms, F, tLag,1e-6, 1e-6, 1e4);
+  x = pmx_solve_rk45(twoCptNeutModelODE, nCmt, time, amt, rate, ii, evid, cmt, addl, ss, parms, F, tLag, rtol, atol, max_num_step);
 
   cHat = x[2, ]' / V1;
   neutHat = x[8, ]' + circ0;
 
-  cHatObs = cHat[iObsPK]; // predictions for observed data records  }
+  cHatObs = cHat[iObsPK]; // predictions for observed data records
   neutHatObs = neutHat[iObsPD]; // predictions for observed data records
 }
 

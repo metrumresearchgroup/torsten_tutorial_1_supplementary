@@ -1,5 +1,5 @@
 functions{
-  real[] FK_ODE(real t, real[] y, real[] y_pk, real[] theta, real[] rdummy, int[] idummy){
+  real[] twocptneutmodelode(real t, real[] y, real[] y_pk, real[] theta, real[] rdummy, int[] idummy){
     /* PK variables */
     real V1 = theta[3];
 
@@ -104,7 +104,7 @@ transformed parameters{
 
   parms = {CL, Q, V1, V2, ka, mtt, circ0, gamma, alpha};
 
-  x = pmx_solve_twocpt_rk45(FK_ODE, nOde, time, amt, rate, ii, evid, cmt, addl, ss, parms, biovar, tlag, rtol, atol, 1e4);
+  x = pmx_solve_twocpt_rk45(twocptneutmodelode, nOde, time, amt, rate, ii, evid, cmt, addl, ss, parms, biovar, tlag, rtol, atol, 1e4);
 
   cHat = x[2, ]' / V1;
   neutHat = x[8, ]' + circ0;
