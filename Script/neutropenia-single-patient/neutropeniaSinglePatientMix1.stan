@@ -1,13 +1,13 @@
 functions{
-  real[] twocptneutmodelode(real t, real[] y, real[] y_pk, real[] theta, real[] rdummy, int[] idummy){
+  real[] twoCptNeutModelODE(real t, real[] y, real[] y_pk, real[] theta, real[] rdummy, int[] idummy){
     /* PK variables */
     real V1 = theta[3];
 
     /* PD variable */
     real mtt      = theta[6];
     real circ0    = theta[7];
-    real alpha    = theta[8];
-    real gamma    = theta[9];
+    real gamma    = theta[8];
+    real alpha    = theta[9];
     real ktr      = 4.0 / mtt;
     real prol     = y[1] + circ0;
     real transit1 = y[2] + circ0;
@@ -62,6 +62,7 @@ data{
 
   real<lower = 0> rtol;
   real<lower = 0> atol;
+  int<lower = 0> max_num_step;
 }
 
 transformed data{
@@ -104,7 +105,7 @@ transformed parameters{
 
   parms = {CL, Q, V1, V2, ka, mtt, circ0, gamma, alpha};
 
-  x = pmx_solve_twocpt_rk45(twocptneutmodelode, nOde, time, amt, rate, ii, evid, cmt, addl, ss, parms, biovar, tlag, rtol, atol, 1e4);
+  x = pmx_solve_twocpt_rk45(twoCptNeutModelODE, nOde, time, amt, rate, ii, evid, cmt, addl, ss, parms, biovar, tlag, rtol, atol, max_num_step);
 
   cHat = x[2, ]' / V1;
   neutHat = x[8, ]' + circ0;
@@ -135,15 +136,12 @@ generated quantities{
   real cObsPred[nt];
   real neutObsPred[nt];
 
-
   for(i in 1:nt){
     if(time[i] == 0){
       cObsPred[i] = 0;
     }else{
-      cObsPred[i] = exp(normal_rng(log(fmax(machine_precision(), cHat[i])),
-				   sigma));
+      cObsPred[i] = exp(normal_rng(log(fmax(machine_precision(), cHat[i])), sigma));
     }
-    neutObsPred[i] = exp(normal_rng(log(fmax(machine_precision(),
-					     neutHat[i])), sigmaNeut));
+    neutObsPred[i] = exp(normal_rng(log(fmax(machine_precision(), neutHat[i])), sigmaNeut));
   }
 }

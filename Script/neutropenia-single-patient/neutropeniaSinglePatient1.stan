@@ -106,7 +106,7 @@ transformed parameters{
   vector[nObsPK] cHatObs;
   vector[nt] neutHat;
   vector[nObsPD] neutHatObs;
-  matrix[8, nt] x;
+  matrix[nCmt, nt] x;
   real<lower = 0> parms[9];
 
   parms = {CL, Q, V1, V2, ka, mtt, circ0, gamma, alpha};

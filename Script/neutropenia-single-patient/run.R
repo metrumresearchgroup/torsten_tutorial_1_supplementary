@@ -19,6 +19,7 @@ outDir <- file.path(modelDir, modelName)
 
 library("cmdstanr")
 library("bayesplot")
+library("posterior")
 library("tidyverse")
 library(bayesplot)
 ## Go back to default ggplot2 theme that was overridden by bayesplot
@@ -27,6 +28,8 @@ library(tidyverse)
 library(parallel)
 
 options(mc.cores = parallel::detectCores())
+
+bayesplot::color_scheme_set("mix-blue-green")
 
 set.seed(10271998) ## not required but assures repeatable results
 
@@ -63,7 +66,10 @@ xneut <- seq(0, 672, by = 24)
 time <- sort(unique(c(xpk, xneut, doseTimes)))
 
 ## Assemble data set for simulation using Stan
-obsData <- data.frame(time = time) %>% mutate(amt = 0, cmt = 1, evid = 0)
+obsData <- data.frame(time = time) %>%
+    mutate(amt = 0,
+           cmt = 1,
+           evid = 0)
 
 doseData <- data.frame(time = doseTimes) %>%
     mutate(amt = 80 * 1000, # mcg
@@ -95,8 +101,9 @@ dataSim <- with(allData,
                      sigmaNeut = sigmaNeut))
 
 ### Simulate using Stan
-mod <- cmdstan_model(file.path(modelDir, paste(simModelName, ".stan", sep = "")), quiet=FALSE)
-sim <- mod$sample(data = dataSim, fixed_param=TRUE, iter_sampling=1, chains=1)
+
+mod.sim <- cmdstan_model(file.path(modelDir, paste(simModelName, ".stan", sep = "")), quiet=FALSE)
+sim <- mod.sim$sample(data = dataSim, fixed_param=TRUE, iter_sampling=1, chains=1)
 
 ################################################################################################
 ### Assemble data set for fitting via Stan
@@ -115,8 +122,8 @@ xdata <- xdata %>%
 
 head(xdata)
 
-dir.create(figDir, recursive=TRUE)
-dir.create(tabDir, recursive=TRUE)
+dir.create(figDir)
+dir.create(tabDir)
 
 ## open graphics device
 pdf(file = file.path(figDir, paste(modelName,"Plots%03d.pdf", sep = "")),
@@ -165,6 +172,28 @@ gammaPriorCV <- 0.2
 alphaPrior <- 3.0E-4
 alphaPriorCV <- 1 ## 0.2
 
+### create initial estimates
+init <- function(){
+  CL = exp(rnorm(1, log(CLPrior), CLPriorCV))
+  Q = exp(rnorm(1, log(QPrior), QPriorCV))
+  V1 = exp(rnorm(1, log(V1Prior), V1PriorCV))
+  V2 = exp(rnorm(1, log(V2Prior), V2PriorCV))
+  lambda1 <- (CL / V1 + Q / V1 + Q / V2 +
+                sqrt((CL / V1 + Q / V1 + Q / V2)^2 -
+                       4 * CL / V1 * Q / V2)) / 2
+  list(CL = CL,
+       Q = Q,
+       V1 = V1,
+       V2 = V2,
+       ka = lambda1 + exp(rnorm(1, log(kaPrior), kaPriorCV)),
+       sigma = 0.2,
+       alpha = exp(rnorm(1, log(alphaPrior), alphaPriorCV)),
+       mtt = exp(rnorm(1, log(mttPrior), mttPriorCV)),
+       circ0 = exp(rnorm(1, log(circ0Prior), circ0PriorCV)),
+       gamma = exp(rnorm(1, log(gammaPrior), gammaPriorCV)),
+       sigmaNeut = 0.2)
+}
+
 ## create data set
 data <- with(xdata,
              list(nt = nt,
@@ -196,31 +225,10 @@ data <- with(xdata,
                   gammaPriorCV = gammaPriorCV,
                   alphaPrior = alphaPrior,
                   alphaPriorCV = alphaPriorCV,
-                  rtol = 1.e-4,
-                  atol = 1.e-6
+                  rtol = 1.e-6,
+                  atol = 1.e-6,
+                  max_num_step = 10000
                   ))
-
-### create initial estimates
-init <- function(){
-  CL = exp(rnorm(1, log(CLPrior), CLPriorCV))
-  Q = exp(rnorm(1, log(QPrior), QPriorCV))
-  V1 = exp(rnorm(1, log(V1Prior), V1PriorCV))
-  V2 = exp(rnorm(1, log(V2Prior), V2PriorCV))
-  lambda1 <- (CL / V1 + Q / V1 + Q / V2 +
-                sqrt((CL / V1 + Q / V1 + Q / V2)^2 -
-                       4 * CL / V1 * Q / V2)) / 2
-  list(CL = CL,
-       Q = Q,
-       V1 = V1,
-       V2 = V2,
-       ka = lambda1 + exp(rnorm(1, log(kaPrior), kaPriorCV)),
-       sigma = 0.2,
-       alpha = exp(rnorm(1, log(alphaPrior), alphaPriorCV)),
-       mtt = exp(rnorm(1, log(mttPrior), mttPriorCV)),
-       circ0 = exp(rnorm(1, log(circ0Prior), circ0PriorCV)),
-       gamma = exp(rnorm(1, log(gammaPrior), gammaPriorCV)),
-       sigmaNeut = 0.2)
-}
 
 ### Specify the variables for which you want history and density plots
 
@@ -239,83 +247,37 @@ parameters <- c(parametersToPlot, otherRVs)
 mod.fit <- cmdstan_model(file.path(modelDir, paste(modelName, ".stan", sep = "")), quiet=FALSE)
 fit <- mod.fit$sample(data = data,
                       iter_sampling = 500,
-                      iter_warmup = 800,
+                      iter_warmup = 1000,
                       thin = 1,
                       init = init,
                       chains = 4,
-                      cores = 4,
+                      parallel_chains = 4,
                       refresh = 10,
                       adapt_delta = 0.80, step_size = 0.1)
 
 dir.create(outDir)
-save(fit, file = file.path(outDir, paste(modelName, "Fit.Rsave", sep = "")))
-##load(file.path(outDir, paste(modelName, "Fit.Rsave", sep = "")))
+fit$save_output_files()
 
 ################################################################################################
-## posterior distributions of parameters
+## posterior predictive checks
 
-options(bayesplot.base_size = 12,
-        bayesplot.base_family = "sans")
-color_scheme_set(scheme = "brightblue")
-myTheme <- theme(text = element_text(size = 12), axis.text = element_text(size = 12))
+c.rep <- fit$draws(variables = c("cObsPred")) %>% as_draws_df() %>% as.matrix()
+c.rep <- c.rep[ , data$iObsPK]
 
-rhats <- rhat(fit, pars = parametersToPlot)
-mcmc_rhat(rhats) + yaxis_text() + myTheme
+neut.rep <- fit$draws(variables = c("neutObsPred")) %>% as_draws_df() %>% as.matrix()
+neut.rep <- neut.rep[ , data$iObsPD]
 
-ratios1 <- neff_ratio(fit, pars = parametersToPlot)
-mcmc_neff(ratios1) + yaxis_text() + myTheme
+c.obs <- data$cObs
+neut.obs <- data$neutObs
+time <- data$time[-1]
 
-mcmcHistory(fit, pars = parametersToPlot, nParPerPage = 5, myTheme = myTheme)
-mcmcDensity(fit, pars = parametersToPlot, nParPerPage = 16, byChain = TRUE,
-            myTheme = theme(text = element_text(size = 12), axis.text = element_text(size = 10)))
-mcmcDensity(fit, pars = parametersToPlot, nParPerPage = 16,
-            myTheme = theme(text = element_text(size = 12), axis.text = element_text(size = 10)))
+## bayesplot::ppc_intervals(y = c.obs, yrep = c.rep, x = data$time[data$iObsPK])
+ppc.pk <- bayesplot::ppc_ribbon(y = c.obs, yrep = c.rep, x = data$time[data$iObsPK]) +
+    scale_x_continuous(name="time (h)") +
+    scale_y_continuous(name="drug plasma concentration (ng/mL)") + theme(axis.title=element_text(size=20),axis.text=element_text(size=20),legend.text=element_text(size=20))
+ggsave(file.path(figDir, "neutrophil_ppc_pk.pdf"))
 
-pairs(fit, pars = parametersToPlot[!grepl("rho", parametersToPlot)])
-
-ptable <- monitor(as.array(fit, pars = parametersToPlot), warmup = 0, print = FALSE)
-write.csv(ptable, file = file.path(tabDir, paste(modelName, "ParameterTable.csv", sep = "")))
-
-################################################################################################
-### posterior predictive distributions
-
-pred <- as.data.frame(fit, pars = "cObsPred") %>%
-  gather(factor_key = TRUE) %>%
-  group_by(key) %>%
-  summarize(lb = quantile(value, probs = 0.05, na.rm = TRUE),
-            median = quantile(value, probs = 0.5, na.rm = TRUE),
-            ub = quantile(value, probs = 0.95, na.rm = TRUE)) %>%
-  bind_cols(xdata) %>%
-  filter(time <= max(xpk))
-
-p1 <- ggplot(pred, aes(x = time, y = cObs))
-p1 <- p1 + geom_point() +
-  labs(title = "individual predictions",
-       x = "time (h)",
-       y = "ME-2 plasma concentration (ng/mL)") +
-  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-        legend.position = "none", strip.text = element_text(size = 8))
-
-print(p1 + geom_line(aes(x = time, y = median)) +
-        geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25))
-
-pred <- as.data.frame(fit, pars = "neutObsPred") %>%
-  gather(factor_key = TRUE) %>%
-  group_by(key) %>%
-  summarize(lb = quantile(value, probs = 0.05, na.rm = TRUE),
-            median = quantile(value, probs = 0.5, na.rm = TRUE),
-            ub = quantile(value, probs = 0.95, na.rm = TRUE)) %>%
-  bind_cols(xdata)
-
-p1 <- ggplot(pred, aes(x = time, y = neutObs))
-p1 <- p1 + geom_point() +
-  labs(title = "individual predictions",
-       x = "time (h)",
-       y = "ANC") +
-  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-        legend.position = "none", strip.text = element_text(size = 8))
-
-print(p1 + geom_line(aes(x = time, y = median)) +
-        geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25))
-
-dev.off()
+ppc.pd <- bayesplot::ppc_ribbon(y = neut.obs, yrep = neut.rep, x = data$time[data$iObsPD]) +
+    scale_x_continuous(name="time (h)") +
+    scale_y_continuous(name="Neutrophil counts") + theme(axis.title=element_text(size=20),axis.text=element_text(size=20),legend.text=element_text(size=20))
+ggsave(file.path(figDir, "neutrophil_ppc_pd.pdf"))
