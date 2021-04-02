@@ -228,8 +228,7 @@ transformed parameters {
 The Stan file contains all the coding blocks in the following order: \texttt{data}, \texttt{transformed data}, \texttt{parameters}, \texttt{transformed parameters}, \texttt{model}.
 The full Stan code can be found in the Supplementary Material.
 
-\subsection{Calling Stan from R}
-
+\subsection{Calling Stan from R}\label{sec:call_stan_from_R}
 The package CmdStanR allows us to run a number of algorithms on a model defined in a Stan file.
 An excellent place to get started with the package is \url{https://mc-stan.org/cmdstanr/articles/cmdstanr.html}.
 
@@ -364,7 +363,8 @@ Once we develop enough confidence in our inference, we still want to check our f
 There are many ways of doing this.
 We may look at the posterior distribution of an interpretable parameter and see if it suggests implausible values.
 Or we may evaluate the model's ability to perform a certain task, e.g. classification or prediction, as is often done in machine learning.
-In practice, we find it useful to do \textit{posterior predictive checks}, that is simulate data from the fitted model and compare the simulation to the observed data \cite[chapter 6]{Gelman:2013}.
+In practice, we find it useful to do \textit{posterior predictive
+  checks} (PPC), that is simulate data from the fitted model and compare the simulation to the observed data \cite[chapter 6]{Gelman:2013}.
 %
 Mechanically, the procedure is straightforward:
 \begin{enumerate}

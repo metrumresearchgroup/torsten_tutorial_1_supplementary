@@ -141,12 +141,46 @@ The \texttt{model} block is similar to that in Section \ref{sec:twocpt}.
 \lstinputlisting[firstline=117,lastline=133]{../../Script/neutropenia-single-patient/neutropeniaSinglePatientMix1.stan}
 
 \subsubsection{Posterior predictive checks}
-We hope by now reader has developed the routine of performing
-posterior predictive checks (PPC). Since we have both PK (drug
+We hope by now reader has developed the habit of performing
+PPC on every model. Since we have both PK (drug
 concentration) and PD (neutrophil count) observations, the PPC should
-be conducted on both (Figure \ref{fig:neutro_ppc_1} and \ref{fig:neutro_ppc_2}).
+be conducted on both.
 \lstinputlisting[firstline=135,lastline=147]{../../Script/neutropenia-single-patient/neutropeniaSinglePatientMix1.stan}
 
+To add flexibility, \texttt{cmdstanr} packages provides a function
+\texttt{generate\_quantities} so we can actually run the above code
+\emph{after} the fitting run is completed. With
+Stan model variable \texttt{mod} that contains the above \texttt{generated quantities}
+block and fitting results \texttt{fit}, as in Section \ref{sec:call_stan_from_R},
+we can do
+\begin{lstlisting}[language=R, numbers=none]
+fit.gq <- mod$generate_quantities(fit)
+\end{lstlisting}
+and use the results for PPC.
+Even better, for such a routine operation in Bayesian data analysis, package \texttt{bayesplot}
+provides numerous plotting functions.
+\begin{lstlisting}[language=R, numbers=none]
+c.rep <- fit.gq$draws(variables = c("cObsPred")) %>% as_draws_df() %>% as.matrix()
+c.rep <- c.rep[ , data$iObsPK]  # use iObsPK from data to extract PK predictions corresponding to observation time
+
+neut.rep <- fit.gq$draws(variables = c("neutObsPred")) %>% as_draws_df() %>% as.matrix()
+neut.rep <- neut.rep[ , data$iObsPD]  # use iObsPD from data to extract PD predictions corresponding to observation time
+
+c.obs <- data$cObs  # PK observations
+neut.obs <- data$neutObs # PD observations
+
+# PPC(PK): drug concentration
+ppc.pk <- bayesplot::ppc_ribbon(y = c.obs, yrep = c.rep, x = data$time[data$iObsPK]) +
+    scale_x_continuous(name="time (h)") +
+    scale_y_continuous(name="drug plasma concentration (ng/mL)") + theme(axis.title=element_text(size=20),axis.text=element_text(size=20),legend.text=element_text(size=20))
+
+# PPC(PD): neutrophil count
+ppc.pd <- bayesplot::ppc_ribbon(y = neut.obs, yrep = neut.rep, x = data$time[data$iObsPD]) +
+    scale_x_continuous(name="time (h)") +
+    scale_y_continuous(name="Neutrophil counts") + theme(axis.title=element_text(size=20),axis.text=element_text(size=20),legend.text=element_text(size=20))
+\end{lstlisting}
+
+The code generates Figure \ref{fig:neutro_ppc_1} and \ref{fig:neutro_ppc_2}.
 \begin{figure}
   \begin{subfigure}[b]{0.45\textwidth}
     \includegraphics[width=\textwidth]{../figures/neutrophil_ppc_pk.pdf}
