@@ -3,18 +3,21 @@ As a starting example, we consider a compartment pharmacokinetic model for a sin
 The patient receives multiple doses at regular time intervals and the drug plasma concentration is recorded over time.
 Our goal is to infer the physiological parameters of the patient, pertinent to the drug's pharmacokinetics, and the measurement error.
 
-\subsection{Pharmacokinetic model and clinical event schedule} 
+\subsection{Pharmacokinetic model and clinical event schedule} \label{sec:twocpt}
 
 The two compartment pharmacokinetic model describes how the drug circulates in the patient's body, until it is cleared out (Figure~\ref{fig:twocpt}).
 The drug is orally administered and enters the system through the gut.
 Once the drug is introduced in the system, the \textit{natural evolution} of the system is described by a system of ODEs.
 In the case of a two compartment model with a first-order absorption from the gut, the system is the following:
 %
+\begin{subequations}
 \begin{eqnarray*}
   \frac{\mathrm d y_\mathrm{gut}}{\mathrm d t} & = & - k_a y_\mathrm{gut} \\ 
-  \frac{\mathrm d y_\mathrm{central}}{\mathrm d t} & = & k_a y_\mathrm{gut} - \left (\frac{CL}{V_\mathrm{cent}} + \frac{Q}{V_\mathrm{cent}} \right) y_\mathrm{cent} + \frac{Q}{V_\mathrm{peri}} y_\mathrm{peri} \\
+  \frac{\mathrm d y_\mathrm{cent}}{\mathrm d t} & = & k_a y_\mathrm{gut} - \left (\frac{CL}{V_\mathrm{cent}} + \frac{Q}{V_\mathrm{cent}} \right) y_\mathrm{cent} + \frac{Q}{V_\mathrm{peri}} y_\mathrm{peri} \\
   \frac{\mathrm d y_\mathrm{peri}}{\mathrm d t} & = & \frac{Q}{V_\mathrm{cent}} y_\mathrm{cent} - \frac{Q}{V_\mathrm{peri}} y_\mathrm{peri}
 \end{eqnarray*}
+\label{eq:twocpt}
+\end{subequations}
 %
 with
 \begin{itemize}
@@ -225,8 +228,7 @@ transformed parameters {
 The Stan file contains all the coding blocks in the following order: \texttt{data}, \texttt{transformed data}, \texttt{parameters}, \texttt{transformed parameters}, \texttt{model}.
 The full Stan code can be found in the Supplementary Material.
 
-\subsection{Calling Stan from R}
-
+\subsection{Calling Stan from R}\label{sec:call_stan_from_R}
 The package CmdStanR allows us to run a number of algorithms on a model defined in a Stan file.
 An excellent place to get started with the package is \url{https://mc-stan.org/cmdstanr/articles/cmdstanr.html}.
 
@@ -361,7 +363,8 @@ Once we develop enough confidence in our inference, we still want to check our f
 There are many ways of doing this.
 We may look at the posterior distribution of an interpretable parameter and see if it suggests implausible values.
 Or we may evaluate the model's ability to perform a certain task, e.g. classification or prediction, as is often done in machine learning.
-In practice, we find it useful to do \textit{posterior predictive checks}, that is simulate data from the fitted model and compare the simulation to the observed data \cite[chapter 6]{Gelman:2013}.
+In practice, we find it useful to do \textit{posterior predictive
+  checks} (PPC), that is simulate data from the fitted model and compare the simulation to the observed data \cite[chapter 6]{Gelman:2013}.
 %
 Mechanically, the procedure is straightforward:
 \begin{enumerate}
