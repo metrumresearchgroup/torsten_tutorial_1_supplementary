@@ -21,9 +21,11 @@ ifdef TORSTEN_MPI
   endif
   CXXFLAGS += $(CXXFLAGS_MPI)
   LDFLAGS += $(LDFLAGS_MPI)
+# use default if not set MPI compilers in make/local
+ifeq (,$(findstring mpicxx,$(CXX)))
   CC=mpicxx
   CXX=mpicxx
-  # LDFLAGS_MPI ?=
+endif
 endif
 
 # By default Torsten solvers use Torsten's ODE integrator,
