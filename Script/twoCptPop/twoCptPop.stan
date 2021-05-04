@@ -21,7 +21,6 @@ data {
 }
 
 transformed data {
-  vector[nObs] logCObs = log(cObs);
   int nTheta = 5;
   int nCmt = 3;
   int nIIV = 5;
@@ -35,11 +34,14 @@ parameters {
   real<lower = 0> Q_pop;
   real<lower = 0> VC_pop;
   real<lower = 0> VP_pop;
-  real<lower = 0> ka_pop;
-
+//  real<lower = 0> ka_pop; // ka unconstrained
+  real<lower = (CL_pop / VC_pop + Q_pop / VC_pop + Q_pop / VP_pop +
+		sqrt((CL_pop / VC_pop + Q_pop / VC_pop + Q_pop / VP_pop)^2 -
+		     4 * CL_pop / VC_pop * Q_pop / VP_pop)) / 2> ka_pop; // ka > lambda_1
   // Inter-individual variability
   vector<lower = 0>[nIIV] omega;
   real<lower = 0> theta[nSubjects, nTheta];
+//  matrix[nSubjects, nTheta] eta;
 
   real<lower = 0> sigma;
 }
@@ -47,8 +49,8 @@ parameters {
 transformed parameters {
   vector<lower = 0>[nTheta] 
     theta_pop = to_vector({CL_pop, Q_pop, VC_pop, VP_pop, ka_pop});
+//  real<lower = 0> theta[nSubjects, nTheta];
   row_vector<lower = 0>[nEvent] concentration;
-  row_vector<lower = 0>[nObs] concentrationObs;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
   for (j in 1:nSubjects) {
@@ -66,7 +68,6 @@ transformed parameters {
                       mass[2, start[j]:end[j]] / theta[j, 3];
   }
 
-  concentrationObs = concentration[iObs];
 }
 
 model {
@@ -76,28 +77,26 @@ model {
   VC_pop ~ lognormal(log(35), prior_sd[3]);
   VP_pop ~ lognormal(log(105), prior_sd[4]);
   ka_pop ~ lognormal(log(2.5), prior_sd[5]);
-  sigma ~ normal(0, 1);
-  omega ~ lognormal(0.25, 0.1);
-  // omega ~ lognormal(prior_sd, 0.2);
+  sigma ~ normal(0, 0.5);
+  omega ~ normal(0, 0.5); 
 
-  // hierarchical prior
-  for (j in 1:nSubjects)
+  // interindividual variability
+  for (j in 1:nSubjects){
     theta[j, ] ~ lognormal(log(theta_pop), omega);
+  }
 
   // likelihood
-  logCObs ~ normal(log(concentrationObs), sigma);
+  cObs ~ lognormal(log(concentration[iObs]), sigma);
 }
-
 
 generated quantities {
   real concentrationObsPred[nObs] 
-    = exp(normal_rng(log(concentrationObs), sigma));
+    = exp(normal_rng(log(concentration[iObs]), sigma));
 
   real cObsNewPred[nObs];
   matrix<lower = 0>[nCmt, nEvent] massNew;
   real thetaNew[nSubjects, nTheta];
   row_vector<lower = 0>[nEvent] concentrationNew;
-  row_vector<lower = 0>[nObs] concentrationObsNew;
 
   for (j in 1:nSubjects) {
     thetaNew[j, ] = lognormal_rng(log(theta_pop), omega);
@@ -115,9 +114,7 @@ generated quantities {
 
       concentrationNew[start[j]:end[j]]
         = massNew[2, start[j]:end[j]] / thetaNew[j, 3];
-
-      concentrationObsNew = concentrationNew[iObs];
   }
 
-  cObsNewPred = exp(normal_rng(log(concentrationObsNew), sigma));
+  cObsNewPred = lognormal_rng(log(concentrationNew[iObs]), sigma);
 }
