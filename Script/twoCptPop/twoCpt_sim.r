@@ -2,7 +2,6 @@
 rm(list = ls())
 gc()
 set.seed(1954)
-set.seed(11191951)
 
 ##.libPaths("~/Rlib")
 ##setwd("~/Code/torsten_tutorial_psp/Script/twoCptPop")
@@ -11,6 +10,12 @@ scriptDir <- getwd() ## assumes you navigated to twoCptPop directory
 library(tidyverse)
 library(cmdstanr)
 library(posterior)
+
+qnorm.trunc = function(p,mean=0,sd=1,lower=-Inf,upper=Inf)
+  qnorm(p*pnorm(upper,mean,sd)+(1-p)*pnorm(lower,mean,sd),mean,sd)
+
+rnorm.trunc = function(n,mean=0,sd=1,lower=-Inf,upper=Inf)
+  qnorm.trunc(runif(n),mean,sd,lower,upper)
 
 set_cmdstan_path(file.path(dirname(dirname(scriptDir)), "Torsten", "cmdstan"))
 
@@ -23,6 +28,8 @@ set.seed(1954)
 
 time_after_dose <-
   c(0.083, 0.167, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8)
+
+weight <- rnorm.trunc(n_subjects, 70, 20, 40, 110)
 
 ## Create skeleton of NONMEM-style data set
 data1 <- tibble(id = rep(1:n_subjects, each = n_event),
@@ -37,22 +44,24 @@ data1 <- tibble(id = rep(1:n_subjects, each = n_event),
                 rate = rep(0, n_event * n_subjects),
                 ss = rep(0, n_event * n_subjects),
                 ## use dummy value for observations
-                cObs = rep(1, n_event * n_subjects))
-
+                cObs = rep(1, n_event * n_subjects)) %>%
+  mutate(weight = weight[id])
 
 ## Reformat for Stan
 start = c(1, 1:(n_subjects - 1)  * n_event + 1)
 end = 1:n_subjects * n_event
 iObs = (1:(n_event * n_subjects))[-start]
-data <- c(as.list(data1 %>% select(-cObs)),
+nObs = length(iObs)
+data <- c(as.list(data1 %>% select(-cObs, -weight)),
           list(start = start,
                end = end,
                iObs = iObs,
-               nEvent = n_event * n_subjects,
+               nEvent = nrow(data1),
                nSubjects = n_subjects,
                nIIV = 5,
-               nObs = n_obs_persub * n_subjects,
+               nObs = nObs,
                ## use dummy value for observations
+               weight = with(data1, weight[!duplicated(id)]),
                cObs = data1$cObs[iObs]))
 
 init <- function () {
@@ -77,11 +86,11 @@ n_chains <- 1
 fit <- mod$sample(data = data, chains = n_chains, init = init,
                   parallel_chains = n_chains,
                   iter_warmup = 0, iter_sampling = 1,
-                  fixed_param = TRUE, seed = 123)
+                  fixed_param = TRUE, seed = 11191951)
 
 data2 <- data1 %>%
   mutate(cObs = NA)
-data2$cObs[iObs] = fit$draws("concentrationObsPred")[1, 1, ]
+data2$cObs[iObs] = fit$draws("cObsNewPred")[1, 1, ]
 
 ggplot(data2, aes(x = time, y = cObs, group = id)) +
   geom_line()
