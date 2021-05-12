@@ -40,7 +40,7 @@ n_subjects <- length(unique(data1$id))
 iObs <- with(data1, (1:nEvent)[!is.na(cObs) & evid == 0])
 nObs <- length(iObs)
 
-data <- c(as.list(data1 %>% select(-cObs)),
+data <- c(as.list(data1 %>% select(-cObs, -weight)),
           list(start = start,
                end = end,
                iObs = iObs,
@@ -48,6 +48,7 @@ data <- c(as.list(data1 %>% select(-cObs)),
                nSubjects = n_subjects,
                nIIV = 5,
                nObs = nObs,
+               weight = with(data1, weight[!duplicated(id)]),
                cObs = data1$cObs[iObs]))
 
 # Draw initial conditions from the prior
@@ -108,35 +109,27 @@ print(fit$time(), digits = 3)
 pars = c("lp__", "CL_pop", "Q_pop", "VC_pop", "VP_pop",
          "ka_pop", "sigma")
 fit$summary(c(pars, "omega"))
-bayesplot::mcmc_trace(fit$draws(), pars = pars)
-bayesplot::mcmc_dens_overlay(fit$draws(), pars = pars)
-bayesplot::mcmc_trace(fit$draws(), pars = vars(starts_with("omega")))
-bayesplot::mcmc_dens_overlay(fit$draws(), pars = vars(starts_with("omega")))
+bayesplot::mcmc_trace(fit$draws(pars))
+bayesplot::mcmc_trace(fit$draws("omega"))
+bayesplot::mcmc_dens_overlay(fit$draws(pars))
+bayesplot::mcmc_dens_overlay(fit$draws("omega"))
 
 ##########################################################################
 ## Posterior predictive checks
 
-yrep <- as.matrix(
-  as_draws_df(
-    fit$draws(variables = c("concentrationObsPred"))))
-yrep <- yrep[, -((ncol(yrep) - 2):ncol(yrep))]
+yrep <- as_draws_matrix(fit$draws(variables = c("concentrationObsPred")))
 
-yobs <- data$cObs
-time <- data$time[data$iObs]
-patientID <- with(data, rep(1:nSubjects, each = nObs / nSubjects))
+yobs <- data1$cObs[iObs]
+time <- data1$time[iObs]
+patientID <- data1$id[iObs]
 
 # within patient predictions
 bayesplot::ppc_intervals_grouped(y = yobs, yrep = yrep, x = time, patientID)
-bayesplot::ppc_ribbon_grouped(y = yobs, yrep = yrep, x = time, patientID)
 
 # predictions for new patient
-yrepNew <- as.matrix(
-  as_draws_df(
-    fit$draws(variables = c("cObsNewPred"))))
-yrepNew <- yrepNew[, -((ncol(yrepNew) - 2):ncol(yrepNew))]
+yrepNew <- as_draws_matrix(fit$draws(variables = c("cObsNewPred")))
 
 bayesplot::ppc_intervals_grouped(y = yobs, yrep = yrepNew, x = time, patientID)
-bayesplot::ppc_ribbon_grouped(y = yobs, yrep = yrepNew, x = time, patientID)
 
 ## Combine both types of predictions
 predInd <-  posterior::as_draws_df(fit$draws("concentrationObsPred")) %>%

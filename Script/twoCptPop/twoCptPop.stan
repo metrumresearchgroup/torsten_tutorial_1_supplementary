@@ -6,6 +6,7 @@ data {
   int<lower = 1> nSubjects;
   int<lower = 1> start[nSubjects];
   int<lower = 1> end[nSubjects];
+  vector<lower = 0>[nSubjects] weight;
 
   // Event schedule
   int<lower = 1> cmt[nEvent];
@@ -35,13 +36,13 @@ parameters {
   real<lower = 0> VC_pop;
   real<lower = 0> VP_pop;
 //  real<lower = 0> ka_pop; // ka unconstrained
+// To constrain ka_pop > lambda1 uncomment the following
   real<lower = (CL_pop / VC_pop + Q_pop / VC_pop + Q_pop / VP_pop +
 		sqrt((CL_pop / VC_pop + Q_pop / VC_pop + Q_pop / VP_pop)^2 -
 		     4 * CL_pop / VC_pop * Q_pop / VP_pop)) / 2> ka_pop; // ka > lambda_1
   // Inter-individual variability
   vector<lower = 0>[nIIV] omega;
   real<lower = 0> theta[nSubjects, nTheta];
-//  matrix[nSubjects, nTheta] eta;
 
   real<lower = 0> sigma;
 }
@@ -49,10 +50,15 @@ parameters {
 transformed parameters {
   vector<lower = 0>[nTheta] 
     theta_pop = to_vector({CL_pop, Q_pop, VC_pop, VP_pop, ka_pop});
-//  real<lower = 0> theta[nSubjects, nTheta];
   row_vector<lower = 0>[nEvent] concentration;
   matrix<lower = 0>[nCmt, nEvent] mass;
-
+  // Individual parameters
+  vector<lower = 0>[nSubjects] CL = to_vector(theta[, 1]) .* exp(0.75 * log(weight / 70 ));
+  vector<lower = 0>[nSubjects] Q = to_vector(theta[, 2]) .* exp(0.75 * log(weight / 70 ));
+  vector<lower = 0>[nSubjects] VC = to_vector(theta[, 3]) .* (weight / 70);
+  vector<lower = 0>[nSubjects] VP = to_vector(theta[, 4]) .* (weight / 70);
+  vector<lower = 0>[nSubjects] ka = to_vector(theta[, 5]);
+  
   for (j in 1:nSubjects) {
     mass[, start[j]:end[j]] = pmx_solve_twocpt(time[start[j]:end[j]],
                                                amt[start[j]:end[j]],
@@ -62,10 +68,10 @@ transformed parameters {
                                                cmt[start[j]:end[j]],
                                                addl[start[j]:end[j]],
                                                ss[start[j]:end[j]],
-                                               theta[j, ]);
+                                               {CL[j], Q[j], VC[j], VP[j], ka[j]});
 
     concentration[start[j]:end[j]] = 
-                      mass[2, start[j]:end[j]] / theta[j, 3];
+                      mass[2, start[j]:end[j]] / VC[j];
   }
 
 }
@@ -97,11 +103,22 @@ generated quantities {
   matrix<lower = 0>[nCmt, nEvent] massNew;
   real thetaNew[nSubjects, nTheta];
   row_vector<lower = 0>[nEvent] concentrationNew;
+  vector<lower = 0>[nSubjects] CLNew;
+  vector<lower = 0>[nSubjects] QNew;
+  vector<lower = 0>[nSubjects] VCNew;
+  vector<lower = 0>[nSubjects] VPNew;
+  vector<lower = 0>[nSubjects] kaNew;
 
   for (j in 1:nSubjects) {
     thetaNew[j, ] = lognormal_rng(log(theta_pop), omega);
 
-    massNew[, start[j]:end[j]]
+  CLNew = to_vector(thetaNew[, 1]) .* exp(0.75 * log(weight / 70 ));
+  QNew = to_vector(thetaNew[, 2]) .* exp(0.75 * log(weight / 70 ));
+  VCNew = to_vector(thetaNew[, 3]) .* (weight / 70);
+  VPNew = to_vector(thetaNew[, 4]) .* (weight / 70);
+  kaNew = to_vector(thetaNew[, 5]);
+
+  massNew[, start[j]:end[j]]
       = pmx_solve_twocpt(time[start[j]:end[j]],
                       amt[start[j]:end[j]],
                       rate[start[j]:end[j]],
@@ -110,10 +127,10 @@ generated quantities {
                       cmt[start[j]:end[j]],
                       addl[start[j]:end[j]],
                       ss[start[j]:end[j]],
-                      thetaNew[j, ]);
+                      {CLNew[j], QNew[j], VCNew[j], VPNew[j], kaNew[j]});
 
       concentrationNew[start[j]:end[j]]
-        = massNew[2, start[j]:end[j]] / thetaNew[j, 3];
+        = massNew[2, start[j]:end[j]] / VCNew[j];
   }
 
   cObsNewPred = lognormal_rng(log(concentrationNew[iObs]), sigma);
