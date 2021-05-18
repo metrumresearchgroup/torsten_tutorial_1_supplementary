@@ -79,6 +79,7 @@ time <- data$time[-1]
 bayesplot::ppc_intervals(y = yobs, yrep = yrep, x = time)
 p <- bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time,
                            y_draw = "point")
+p
 
 # do ppc plot with observations on the log scale
 p + scale_y_continuous(trans='log10')

@@ -33,14 +33,12 @@ parameters {
 
 transformed parameters {
   real theta[nTheta] = {CL, Q, VC, VP, ka};
-  row_vector<lower = 0>[nEvent] concentration;
-  row_vector<lower = 0>[nObs] concentrationObs;
+  row_vector<lower = 0>[nEvent] concentrationHat;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
   mass = pmx_solve_twocpt(time, amt, rate, ii, evid, cmt, addl, ss, theta);
 
-  concentration = mass[2, ] ./ VC;
-  concentrationObs = concentration[iObs];
+  concentrationHat = mass[2, ] ./ VC;
 }
 
 model {
@@ -53,15 +51,15 @@ model {
   sigma ~ normal(0, 1);
 
   // likelihood
-  cObs ~ lognormal(log(concentrationObs), sigma);
+  cObs ~ lognormal(log(concentrationHat[iObs]), sigma);
 }
 
 generated quantities {
   real concentrationObsPred[nObs] 
-    = lognormal_rng(log(concentrationObs), sigma);
+    = lognormal_rng(log(concentrationHat[iObs]), sigma);
 
   vector[nObs] log_lik;
   for (i in 1:nObs)
     log_lik[i] = lognormal_lpdf(cObs[i] | 
-                                log(concentrationObs[i]), sigma);
+                                log(concentrationHat[iObs[i]]), sigma);
 }
