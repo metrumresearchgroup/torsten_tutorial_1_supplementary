@@ -77,7 +77,11 @@ time <- data$time[-1]
 
 # Bayesplot offers various functions we can experiment with.
 bayesplot::ppc_intervals(y = yobs, yrep = yrep, x = time)
-bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time, y_draw = "point")
+p <- bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time,
+                           y_draw = "point")
+
+# do ppc plot with observations on the log scale
+p + scale_y_continuous(trans='log10')
 
 # compute PSIS-loo estimate
 log_lik_draws <- fit$draws("log_lik")
@@ -108,8 +112,12 @@ yrep2 <- as.matrix(
   ))[, -(52:54)]
 
 bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time)
-bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time, y_draw = "point") +
+p <- bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time, y_draw = "point") +
   xlab("Time (h)") + ylab("Drug concentration (mg/L)")
+p
+
+p + scale_y_continuous(trans='log10')
+
 
 print(loo_estimate2)
 

@@ -18,7 +18,6 @@ data {
 }
 
 transformed data {
-  vector[nObs] logCObs = log(cObs);
   int nTheta = 3;
   int nCmt = 2;
 }
@@ -49,14 +48,14 @@ model {
   ka ~ lognormal(log(2.5), 1);
   sigma ~ normal(0, 1);
 
-  logCObs ~ normal(log(concentrationObs), sigma);
+  cObs ~ lognormal(log(concentrationObs), sigma);
 }
 
 generated quantities {
   real concentrationObsPred[nObs] 
-    = exp(normal_rng(log(concentrationObs), sigma));
+    = lognormal_rng(log(concentrationObs), sigma);
 
   vector[nObs] log_lik;
   for (i in 1:nObs)
-    log_lik[i] = normal_lpdf(logCObs[i] | log(concentrationObs[i]), sigma);
+    log_lik[i] = lognormal_lpdf(cObs[i] | log(concentrationObs[i]), sigma);
 }
