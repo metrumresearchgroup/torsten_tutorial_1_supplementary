@@ -381,7 +381,7 @@ In our two compartment model example, the following code draws new observations 
 \begin{lstlisting}
 generated quantities {
   real concentrationObsPred[nObs] 
-    = exp(normal_rng(log(concentrationObs), sigma));
+    = lognormal_rng(log(concentrationHat[iObs]), sigma);
 }
 \end{lstlisting}
 %
@@ -443,9 +443,9 @@ Conveniently, we can compute $\log p(y_i \mid y)$ in Stan's \texttt{generated qu
 \begin{lstlisting}
 vector[nObs] log_lik;
 for (i in 1:nObs)
-  log_lik[i] =  
-    normal_lpdf(logCObs[i] | log(concentrationObs[i]), 
-                sigma);
+  log_lik[i] = 
+   lognormal_lpdf(cObs[i] | log(concentrationHat[iObs]),
+                  sigma);
 \end{lstlisting}
 These results can then be extracted and fed into Loo to compute $\mathrm{elp}_\mathrm{loo}$.
 The file \texttt{twoCpt.r} in the Supplementary Material shows exactly how to do this.
