@@ -296,11 +296,14 @@ one sensible estimator would be the sample mean,
   \hat {\mathbb E} f = \frac{1}{n} \sum_{i = 1}^n f \left (\theta^{(i)} \right).
 \end{equation*}
 %
-Then, provided the variance of $f$ is finite, the \textit{central limit theorem} teaches us that
+Then, provided the variance of $f$ is finite, the \textit{central limit theorem} teaches us that the sample mean converges, as the sample size increases, to a normal distribution.
+We will not dwell on the technical details of the theorem and go straight to its practical implication, namely:
 \begin{equation*}
-  \hat {\mathbb E} f \overset{\mathrm{approx}}{\sim} \mathrm{Normal} \left ( \mathbb E f, \frac{\mathrm{Var} f}{n} \right ).
+  \hat {\mathbb E} f \overset{\mathrm{approx}}{\sim} \mathrm{Normal} \left ( \mathbb E f, \frac{\mathrm{Var} f}{n} \right ),
 \end{equation*}
 %
+where the deviation from the approximating normal has order $\mathcal O(1 / n^2)$.
+This means that even for a moderate sample size, the approximation tends to be very good.
 This is a powerful result for two reasons: first it tells us that our estimator is unbiased and more importantly that the expected squared error is driven by the variance of $f$ divided by our sample size, $n$.
 
 Unfortunately, estimates constructed with MCMC samples will, in general, neither be unbiased, nor will their variance decrease at rate $n$.
