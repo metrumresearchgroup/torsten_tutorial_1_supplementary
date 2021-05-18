@@ -19,9 +19,21 @@ set_cmdstan_path("~/Code//torsten_tutorial_psp/Torsten/cmdstan/")
 bayesplot::color_scheme_set("mix-blue-green")
 
 ##########################################################################
-## Read in data and create inits.
+## Read in NONMEM-style data
+data1 <- read_csv("twoCpt.data.csv")
 
-data <- fromJSON(file = "twoCpt.data.json")
+# Reformat for Stan
+nEvent <- nrow(data1)
+iObs <- with(data1, (1:nEvent)[!is.na(cObs) & evid == 0])
+nObs <- length(iObs)
+
+data <- c(as.list(data1 %>% select(-cObs, -weight)),
+          list(iObs = iObs,
+               nEvent = nEvent,
+               nObs = nObs,
+               weight = with(data1, weight[!duplicated(id)]),
+               cObs = data1$cObs[iObs]))
+
 
 # Draw initial conditions from the prior
 init <- function() {
