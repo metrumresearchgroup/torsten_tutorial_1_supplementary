@@ -66,14 +66,15 @@ Table~\ref{tab:event_schedule} provides an overview of the roll of each variable
 \subsection{Statistical model}
 
 % We define a generative model.
-Given a treatment, $x$, and the physiological parameters, $\{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri} \}$, we obtain the exact drug plasma concentration, $c$, by solving the relevant ODEs.
-Our measurements, $y$, are a perturbation of $c$ because of our measurement error.
-We model this error using a lognormal error, that is
+Given a treatment, $x$, and the physiological parameters, $\{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri} \}$, we compute the drug plasma concentration, $\hat c$, by solving the relevant ODEs.
+Our measurements, $y$, are a perturbation of $\hat c$.
+This is to account for the fact that our model is not perfect and that our measurements have finite precision.
+We model this residual error using a lognormal distribution, that is
 \begin{equation*}
-  \log y \mid c, \sigma \sim \mathrm{Normal}(\log c, \sigma^2),
+  y \mid \hat c, \sigma \sim \mathrm{logNormal}(\log \hat c, \sigma^2),
 \end{equation*}
-where $\sigma$ is a standard deviation we wish to estimate.
-The deterministic computation of $c$ along with the measurement model, defines our likelihood function $p(y \mid \theta, x)$, where $\theta = \{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri}, \sigma \}$.
+where $\sigma$ is a scale parameter we wish to estimate.
+The deterministic computation of $\hat c$ along with the measurement model, defines our likelihood function $p(y \mid \theta, x)$, where $\theta = \{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri}, \sigma \}$.
 
 It remains to define a prior distribution, $p(\theta)$.
 Our prior should allocate probability mass to every plausible parameter value and exclude patently absurd values.
@@ -103,7 +104,7 @@ It is important to distinguish the two.
 The data is fixed.
 By contrast, the parameter values change as HMC explores the parameter space, and gradients of the joint density are computed with respect to $\theta$, but not $\mathcal D$.
 
-For each variable we introduce, we must declare a type and, for containers such as arrays, vectors, matrices, etc., the size of the container.
+For each variable we introduce, we must declare a type and, for containers such as arrays, vectors, and matrices, the size of the container.
 In addition, each statement ends with a semi-colon.
 It is possible to specify constraints on the parameters, using the keywords \texttt{lower} and \texttt{upper}.
 If one of these constraints is violated, Stan returns an error message.
@@ -166,30 +167,30 @@ model {
   sigma ~ normal(0, 1);
 
   // likelihood
-  logCObs ~ normal(log(concentrationObs), sigma);
+  cObs ~ lognormal(log(concentrationHat[iObs]), sigma);
 }
 \end{lstlisting}
-
-The likelihood statement involves terms which we have not defined yet, notably \texttt{logCObs} and \texttt{concentrationObs}.
-These variables are transformations of the data and the parameters,
-and motivate two additional blocks.
+%
+The likelihood statement involves a crucial term we have not defined yet: \texttt{concentrationHat}.
+Additional variables can be created using the transformed data and transformed parameters blocks.
+We will take advantage of these to compute the drug concentration in the central compartment for each event.
+Note that for the likelihood, we only use the concentration during observation events, hence the indexing \texttt{[iObs]}.
 
 \subsubsection{Transformed data and transformed parameters block} \label{sec:twocpt_transformed_parameters}
 
 In \texttt{transformed data}, we can construct variables which only depend on the data.
-For example,
+For this model, we simply specify the number of compartments in our model (including the gut), \texttt{nCmt}, and the numbers of physiological parameters, \texttt{nTheta}, two variables which will come in handy shortly.
 \begin{lstlisting}
   transformed data {
-    vector[nObs] logCObs = log(cObs);
     int nCmt = 3;
     int nTheta = 5; 
   }
 \end{lstlisting}
-We also specify the number of compartments in our model (including the gut), \texttt{nCmt}, and the numbers of physiological parameters, \texttt{nTheta}, which will come in handy shortly.
+%
 Because the data is fixed, this operation is only computed once.
 By contrast, operations in the \texttt{transformed parameters} block need to be performed (and differentiated) for each new parameter values.
 
-To compute \texttt{concentrationObs} we need to solve the relevant ODE within the clinical event schedule.
+To compute \texttt{concentrationHat} we need to solve the relevant ODE within the clinical event schedule.
 Torsten provides a function which returns the drug mass in each compartment at each time point of the event schedule.
 \begin{lstlisting}
 matrix<lower = 0>[nCmt, nEvent] 
@@ -199,7 +200,7 @@ matrix<lower = 0>[nCmt, nEvent]
 %
 The first eight arguments define the event schedule and the last argument, \texttt{theta}, is an array containing the physiological parameters, and defined as follows:
 \begin{lstlisting}
-  real theta[nTheta] = {CL, Q, VC, VP, ka};
+real theta[nTheta] = {CL, Q, VC, VP, ka};
 \end{lstlisting}
 %
 It is also possible to have \texttt{theta} change between events, and specify lag times and bio-availibilities fractions, although we will not take advantage of these features in the example at hand.
@@ -211,8 +212,7 @@ The full \texttt{transformed parameters} block is as follows:
 \begin{lstlisting}
 transformed parameters {
   real theta[nTheta] = {CL, Q, VC, VP, ka};
-  row_vector<lower = 0>[nEvent] concentration;
-  row_vector<lower = 0>[nObs] concentrationObs;
+  row_vector<lower = 0>[nEvent] concentrationHat;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
   mass = pmx_solve_twocpt(time, amt, rate, ii, evid, 
@@ -220,8 +220,7 @@ transformed parameters {
 
   // Extract mass in central compartment and divide 
   // by central volume.
-  concentration = mass[2, ] ./ VC;
-  concentrationObs = concentration[iObs];
+  concentrationHat = mass[2, ] ./ VC;
 }  
 \end{lstlisting} 
 
