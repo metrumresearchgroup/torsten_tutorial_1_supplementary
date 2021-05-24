@@ -11,12 +11,14 @@ library(tidyverse)
 library(cmdstanr)
 library(posterior)
 
-qnorm.trunc = function(p,mean=0,sd=1,lower=-Inf,upper=Inf)
+qnorm.trunc = function(p,mean=0,sd=1,lower=-Inf,upper=Inf) {
   qnorm(p*pnorm(upper,mean,sd)+(1-p)*pnorm(lower,mean,sd),mean,sd)
+}
 
-rnorm.trunc = function(n,mean=0,sd=1,lower=-Inf,upper=Inf)
+rnorm.trunc = function(n,mean=0,sd=1,lower=-Inf,upper=Inf) {
   qnorm.trunc(runif(n),mean,sd,lower,upper)
-
+}
+  
 set_cmdstan_path(file.path(dirname(dirname(scriptDir)), "Torsten", "cmdstan"))
 
 n_subjects <- 20
@@ -97,3 +99,6 @@ ggplot(data2, aes(x = time, y = cObs, group = id)) +
 
 write_csv(data2, "twoCptPop.data.csv")
 
+# get a subset for individual model
+data3 <- data2[1:n_event, ]
+write_csv(data3, "../twoCpt/twoCpt.data.csv")

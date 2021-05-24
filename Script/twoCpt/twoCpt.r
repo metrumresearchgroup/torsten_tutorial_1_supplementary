@@ -19,9 +19,21 @@ set_cmdstan_path("~/Code//torsten_tutorial_psp/Torsten/cmdstan/")
 bayesplot::color_scheme_set("mix-blue-green")
 
 ##########################################################################
-## Read in data and create inits.
+## Read in NONMEM-style data
+data1 <- read_csv("twoCpt.data.csv")
 
-data <- fromJSON(file = "twoCpt.data.json")
+# Reformat for Stan
+nEvent <- nrow(data1)
+iObs <- with(data1, (1:nEvent)[!is.na(cObs) & evid == 0])
+nObs <- length(iObs)
+
+data <- c(as.list(data1 %>% select(-cObs, -weight)),
+          list(iObs = iObs,
+               nEvent = nEvent,
+               nObs = nObs,
+               weight = with(data1, weight[!duplicated(id)]),
+               cObs = data1$cObs[iObs]))
+
 
 # Draw initial conditions from the prior
 init <- function() {
@@ -77,7 +89,12 @@ time <- data$time[-1]
 
 # Bayesplot offers various functions we can experiment with.
 bayesplot::ppc_intervals(y = yobs, yrep = yrep, x = time)
-bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time, y_draw = "point")
+p <- bayesplot::ppc_ribbon(y = yobs, yrep = yrep, x = time,
+                           y_draw = "point")
+p
+
+# do ppc plot with observations on the log scale
+p + scale_y_continuous(trans='log10')
 
 # compute PSIS-loo estimate
 log_lik_draws <- fit$draws("log_lik")
@@ -108,8 +125,12 @@ yrep2 <- as.matrix(
   ))[, -(52:54)]
 
 bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time)
-bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time, y_draw = "point") +
+p <- bayesplot::ppc_ribbon(y = yobs, yrep = yrep2, x = time, y_draw = "point") +
   xlab("Time (h)") + ylab("Drug concentration (mg/L)")
+p
+
+p + scale_y_continuous(trans='log10')
+
 
 print(loo_estimate2)
 

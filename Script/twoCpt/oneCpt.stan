@@ -18,7 +18,6 @@ data {
 }
 
 transformed data {
-  vector[nObs] logCObs = log(cObs);
   int nTheta = 3;
   int nCmt = 2;
 }
@@ -32,14 +31,12 @@ parameters {
 
 transformed parameters {
   real theta[nTheta] = {CL, VC, ka};
-  row_vector<lower = 0>[nEvent] concentration;
-  row_vector<lower = 0>[nObs] concentrationObs;
+  row_vector<lower = 0>[nEvent] concentrationHat;
   matrix<lower = 0>[nCmt, nEvent] mass;
 
   mass = pmx_solve_onecpt(time, amt, rate, ii, evid, cmt, addl, ss, theta);
 
-  concentration = mass[2, ] ./ VC;
-  concentrationObs = concentration[iObs];
+  concentrationHat = mass[2, ] ./ VC;
 }
 
 model {
@@ -49,14 +46,15 @@ model {
   ka ~ lognormal(log(2.5), 1);
   sigma ~ normal(0, 1);
 
-  logCObs ~ normal(log(concentrationObs), sigma);
+  cObs ~ lognormal(log(concentrationHat[iObs]), sigma);
 }
 
 generated quantities {
   real concentrationObsPred[nObs] 
-    = exp(normal_rng(log(concentrationObs), sigma));
+    = lognormal_rng(log(concentrationHat[iObs]), sigma);
 
   vector[nObs] log_lik;
   for (i in 1:nObs)
-    log_lik[i] = normal_lpdf(logCObs[i] | log(concentrationObs[i]), sigma);
+    log_lik[i] = lognormal_lpdf(cObs[i] | 
+                                  log(concentrationHat[iObs[i]]), sigma);
 }
