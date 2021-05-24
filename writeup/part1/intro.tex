@@ -3,11 +3,10 @@ Bayesian inference offers a principled approach to learn about unknown variables
 The conclusions we draw are based on the posterior distribution which, in all but the simplest cases, is intractable.
 We can however probe the posterior using a host of techniques such as Markov chains Monte Carlo sampling and approximate Bayesian computation.
 Writing these algorithms is a tedious and error prone endeavor but fortunately modelers can often rely on existing software with efficient implementations.
-% Probabilistic programing languages are designed to let users specify a model and then run inference on the backend. 
 
 In the field of pharmacometrics, statistical software such as NONMEM \cite{author:0000} and Monolix \cite{author:0000} support many routines to specify and analyze pharmacokinetic and pharmacodynamic population models.
 There also exist more general probabilistic languages such as, to only name a few, BUGS \cite{author:0000} and more recently Stan \cite{Carpenter:2017}, which will be the focus of this tutorial.
-Stan supports a rich library of probability densities, matrix operations and numerical solvers for differential equations.
+Stan supports a rich library of probability densities, mathematical functions including matrix operations and numerical solvers for differential equations.
 These features make for a rich and flexible language, however writing common pharmacometrics models can be tedious.
 Torsten extends Stan by providing a suite of functions to facilitate the specification of pharmacometrics models.
 These functions make it straightforward to model the event schedule of a clinical trial and parallelize computation across patients for population models.
