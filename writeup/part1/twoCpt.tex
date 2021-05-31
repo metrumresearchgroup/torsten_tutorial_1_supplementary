@@ -1,11 +1,19 @@
 
-As a starting example, we consider a compartment pharmacokinetic model for a single patient.
-The patient receives multiple doses at regular time intervals and the drug plasma concentration is recorded over time.
-Our goal is to infer the physiological parameters of the patient, pertinent to the drug's pharmacokinetics, and the measurement error.
+As a starting example, we demonstrate the analysis of longitudinal plasma drug concentration data from a single individual using a linear 2 compartment model with first order absorption.
+The individual receives multiple doses at regular time intervals and
+the plasma drug concentration is recorded over time.
+Our goal is to estimate the posterior distribution of the parameters of the model describing the time course of the plasma drug concentrations in this individual.
 
 \subsection{Pharmacokinetic model and clinical event schedule} \label{sec:twocpt}
 
-The two compartment pharmacokinetic model describes how the drug circulates in the patient's body, until it is cleared out (Figure~\ref{fig:twocpt}).
+Let's suppose an individual receives a 1,200 mg dose of a drug every
+12 hours, until they have received a total of 14 doses. Drug
+concentrations are measured in plasma obtained from blood sampled at
+0.083, 0.167, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6 and 8 hours
+following the first, second and last dose, at the time of all
+remaining doses. and at 12, 18 and 24 hours following the last dose.  
+
+The two compartment pharmacokinetic model describes how the drug circulates in the individual's body, until it is cleared out (Figure~\ref{fig:twocpt}).
 The drug is orally administered and enters the system through the gut.
 Once the drug is introduced in the system, the \textit{natural evolution} of the system is described by a system of ODEs.
 In the case of a two compartment model with a first-order absorption from the gut, the system is the following:
