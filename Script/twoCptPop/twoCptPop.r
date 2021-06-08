@@ -117,6 +117,10 @@ bayesplot::mcmc_dens_overlay(fit$draws("omega"))
 ##########################################################################
 ## Posterior predictive checks
 
+## open graphics device
+pdf(file = file.path("deliv", paste0(model_name,"Plots%03d.pdf")),
+    width = 8, height = 4, onefile = FALSE)
+
 yrep <- as_draws_matrix(fit$draws(variables = c("concentrationObsPred")))
 
 yobs <- data1$cObs[iObs]
@@ -212,3 +216,4 @@ vpcPlot + geom_point(data = data1, aes(x = time, y = cObs), alpha = 0.1) +
   theme(text = element_text(size = 12),
         axis.text = element_text(size = 12))
 
+dev.off()

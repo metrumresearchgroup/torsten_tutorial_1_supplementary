@@ -8,27 +8,38 @@ In Part II of this tutorial, we will examine a more difficult case, for which we
 
 \subsection{Statistical model} \label{sec:twoCptPop_stat}
 
-Let $\vartheta$ be the 2D array of physiological parameters for each patient,
+Let $\vartheta$ be the 2D array of body weight-normalized pharmacokinetic parameters for each patient,
 with
 \begin{equation*}
-  \vartheta_j = (CL_j, Q_j, ka_j, V_{\mathrm{cent}, j}, V_{\mathrm{peri}, j}, k_{a, j}),
+  \vartheta_j = (CL_{\mathrm{norm}, j}, Q_{\mathrm{norm}, j}, V_{\mathrm{cent}, \mathrm{norm},  j}, V_{\mathrm{peri}, \mathrm{norm}, j}, k_{a, j}),
 \end{equation*} 
 the parameters for the $j^\mathrm{th}$ patient.
-We construct a population model by introducing the prior 
+We construct a population model by introducing random
+variation to describe otherwise unexplained inter-individual
+variability. In a Bayesian context this is sometimes referred to as a
+prior distribution for the individual parameters.
 \begin{eqnarray*}
   \log \vartheta_j \sim \mathrm{Normal} (\log \vartheta_\mathrm{pop}, \Omega),
 \end{eqnarray*}
-for each patient.
-As before we work on the log scale to account for the fact the physiological parameters are constrained to be positive.
+As before we work on the log scale to account for the fact the pharmacokinetic parameters are constrained to be positive.
 $\vartheta_\mathrm{pop} = (CL_\mathrm{pop}, Q_\mathrm{pop}, V_\mathrm{cent, pop}, V_\mathrm{peri, pop}, k_\mathrm{a, pop})$ is the population mean and $\Omega$ the population covariance matrix.
 Both $\vartheta_\mathrm{pop}$ and $\Omega$ are estimated.
 % Prior information about the physiological parameters can now be encoded into priors on the population parameters, rather than on the individual parameters.
-In this example, we start with the common case where $\Omega$ is diagonal.
+In this example, we start with the simple case where $\Omega$ is
+diagonal.
+For our example we will also use conventional allometric scaling to
+adjust the clearance and volume parameters for body weight.
+\begin{align*}
+  CL_j &= CL_{\mathrm{norm}, j} \frac{\mathrm{weight}}{70}^{0.75} = \vartheta_{1j} \frac{\mathrm{weight}}{70}^{0.75} \\
+  Q_j &= Q_{\mathrm{norm}, j} \frac{\mathrm{weight}}{70}^{0.75} = \vartheta_{2j} \frac{\mathrm{weight}}{70}^{0.75} \\
+  V_{\mathrm{cent}, j} &= V_{\mathrm{cent}, \mathrm{norm},  j} \frac{\mathrm{weight}}{70} = \vartheta_{3j} \frac{\mathrm{weight}}{70}^{0.75} \\
+  V_{\mathrm{peri}, j} &= V_{\mathrm{peri}, \mathrm{norm},  j} \frac{\mathrm{weight}}{70} = \vartheta_{4j} \frac{\mathrm{weight}}{70}^{0.75}
+\end{align*}
 
 The likelihood remains mostly unchanged, with the caveat that it must now be computed for each patient.
 Putting this all together, we have the following model, as specified by the joint distribution,
 \begin{eqnarray*}
-  \vartheta_\mathrm{pop} & \sim & p(\vartheta_\mathrm{pop}), \hspace{1in} \text{(prior on physiological parameters)} \\
+  \vartheta_\mathrm{pop} & \sim & p(\vartheta_\mathrm{pop}), \hspace{1in} \text{(prior on pharmacokinetic parameters)} \\
   \Omega & \sim & p(\Omega), \hspace{1.2in} \text{(prior on population covariance)} \\
   \sigma & \sim & p(\sigma) \\
   \vartheta \mid \vartheta_\mathrm{pop}, \Omega  & \sim  & \mathrm{logNormal}(\vartheta_\mathrm{pop}, \Omega), \\
@@ -51,7 +62,7 @@ parameters {
   vector<lower = 0>[5] omega;
   real<lower = 0> theta[nSubjects, 5];
 
-  // measurement error
+  // residual variability
   real<lower = 0> sigma;
 }
 \end{lstlisting}
@@ -77,15 +88,28 @@ model {
   
   sigma ~ normal(0, 1);
 
-  // hierarchical prior
+  // interindividual variability
   for (j in 1:nSubjects)
     theta[j, ] ~ lognormal(log(theta_pop), omega);
 
   // likelihood
-  logCObs ~ normal(log(concentrationObs), sigma);
+  cObs ~ lognormal(log(concentrationObs), sigma);
 }
 \end{lstlisting}
 %
+
+In the \texttt{transformed parameters} lock we also declare and
+calculate the individual parameters given $\vartheta_j$ and any
+relevant covariates---body weight in this case.
+\begin{lstlisting}[style=stan, numbers=none] 
+  // Individual parameters
+  vector<lower = 0>[nSubjects] CL = to_vector(theta[, 1]) .* exp(0.75 * log(weight / 70 ));
+  vector<lower = 0>[nSubjects] Q = to_vector(theta[, 2]) .* exp(0.75 * log(weight / 70 ));
+  vector<lower = 0>[nSubjects] VC = to_vector(theta[, 3]) .* (weight / 70);
+  vector<lower = 0>[nSubjects] VP = to_vector(theta[, 4]) .* (weight / 70);
+  vector<lower = 0>[nSubjects] ka = to_vector(theta[, 5]);
+\end{lstlisting}
+
 It remains to compute \texttt{concentrationObs}.
 There are several ways to do this and, depending on the computational resources available, we may either compute the concentration for each patients sequentially or in parallel.
 For now, we do the simpler sequential approach.
@@ -105,20 +129,19 @@ The full \texttt{for} loop is then
 %
 \begin{lstlisting}[style=stan, numbers=none]
 for (j in 1:nSubjects) {
-  mass[, start[j]:end[j]] = 
-    pmx_solve_twocpt(time[start[j]:end[j]],
-                     amt[start[j]:end[j]],
-                     rate[start[j]:end[j]],
-                     ii[start[j]:end[j]],
-                     evid[start[j]:end[j]],
-                     cmt[start[j]:end[j]],
-                     addl[start[j]:end[j]],
-                     ss[start[j]:end[j]],
-                     theta[j, ]);
+  mass[, start[j]:end[j]] = pmx_solve_twocpt(time[start[j]:end[j]],
+                                             amt[start[j]:end[j]],
+                                             rate[start[j]:end[j]],
+                                             ii[start[j]:end[j]],
+                                             evid[start[j]:end[j]],
+                                             cmt[start[j]:end[j]],
+                                             addl[start[j]:end[j]],
+                                             ss[start[j]:end[j]],
+                                             {CL[j], Q[j], VC[j], VP[j], ka[j]});
 
   concentration[start[j]:end[j]] = 
-         mass[2, start[j]:end[j]] / theta[j, 3];
-  }
+                    mass[2, start[j]:end[j]] / VC[j];
+}
 \end{lstlisting}
 
 Once we have written our Stan model, we can apply the same methods for inference and diagnostics as we did in the previous section.
@@ -127,48 +150,49 @@ Once we have written our Stan model, we can apply the same methods for inference
 
 We follow the exact same procedure as in Section~\ref{sec:twoCpt_ppc} -- using even the same line of code -- to create new observations for our patients.
 Figure~\ref{fig:twoCptPop_ppc} plots the results across patients.
-In addition, we simulate data for new patients by: (i) drawing physiological parameters from our population distribution, (ii) solving the ODEs with these simulated parameters and (iii) using our measurement model to simulate new observations.
+In addition, we simulate data for new patients by: (i) drawing pharmacokinetic parameters from our population distribution, (ii) solving the ODEs with these simulated parameters and (iii) using our measurement model to simulate new observations.
 The generated quantities block then looks as follows:
 %
 \begin{lstlisting}[style=stan, numbers=none]
 generated quantities {
-  // Posterior predictive checks for existing patients
   real concentrationObsPred[nObs] 
-    = exp(normal_rng(log(concentrationObs), sigma));
+    = exp(normal_rng(log(concentration[iObs]), sigma));
 
-  // Posterior predictive checks for new patients
-  // (here we assume they receive the same treatment 
-  // as the observed patients)
   real cObsNewPred[nObs];
   matrix<lower = 0>[nCmt, nEvent] massNew;
   real thetaNew[nSubjects, nTheta];
   row_vector<lower = 0>[nEvent] concentrationNew;
-  row_vector<lower = 0>[nObs] concentrationObsNew;
+  vector<lower = 0>[nSubjects] CLNew;
+  vector<lower = 0>[nSubjects] QNew;
+  vector<lower = 0>[nSubjects] VCNew;
+  vector<lower = 0>[nSubjects] VPNew;
+  vector<lower = 0>[nSubjects] kaNew;
 
   for (j in 1:nSubjects) {
-    // (i) simulate physiological parameters
-    thetaNew[j, ] = lognormal_rng(log(theta_pop),omega);
+    thetaNew[j, ] = lognormal_rng(log(theta_pop), omega);
 
-    // (ii) solve ODEs and compute drug mass
-    massNew[, start[j]:end[j]]
+  CLNew = to_vector(thetaNew[, 1]) .* exp(0.75 * log(weight / 70 ));
+  QNew = to_vector(thetaNew[, 2]) .* exp(0.75 * log(weight / 70 ));
+  VCNew = to_vector(thetaNew[, 3]) .* (weight / 70);
+  VPNew = to_vector(thetaNew[, 4]) .* (weight / 70);
+  kaNew = to_vector(thetaNew[, 5]);
+
+  massNew[, start[j]:end[j]]
       = pmx_solve_twocpt(time[start[j]:end[j]],
-                         amt[start[j]:end[j]],
-                         rate[start[j]:end[j]],
-                         ii[start[j]:end[j]],
-                         evid[start[j]:end[j]],
-                         cmt[start[j]:end[j]],
-                         addl[start[j]:end[j]],
-                         ss[start[j]:end[j]],
-                         thetaNew[j, ]);
+                      amt[start[j]:end[j]],
+                      rate[start[j]:end[j]],
+                      ii[start[j]:end[j]],
+                      evid[start[j]:end[j]],
+                      cmt[start[j]:end[j]],
+                      addl[start[j]:end[j]],
+                      ss[start[j]:end[j]],
+                      {CLNew[j], QNew[j], VCNew[j], VPNew[j], kaNew[j]});
 
       concentrationNew[start[j]:end[j]]
-        = massNew[2, start[j]:end[j]] / thetaNew[j, 3];
-
-      concentrationObsNew = concentrationNew[iObs];
+        = massNew[2, start[j]:end[j]] / VCNew[j];
   }
 
-  // (iii) simulate measurement error 
-  cObsNewPred = exp(normal_rng(log(concentrationObsNew), sigma));
+  cObsNewPred = lognormal_rng(log(concentrationNew[iObs]), sigma);
 }
 \end{lstlisting}
 
@@ -176,7 +200,7 @@ generated quantities {
   \begin{center}
   \includegraphics[width=6in]{../figures/twocpt_pop_ppc_4x8.pdf}
   \end{center}
-  \caption{Posterior predictive checks for poulation two compartment model.}
+  \caption{Posterior predictive checks for population two compartment model.}
   \label{fig:twoCptPop_ppc}
 \end{figure}
 

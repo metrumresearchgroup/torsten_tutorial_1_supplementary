@@ -11,12 +11,9 @@ Let's suppose an individual receives a 1,200 mg dose of a drug every
 concentrations are measured in plasma obtained from blood sampled at
 0.083, 0.167, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6 and 8 hours
 following the first, second and last dose, at the time of all
-remaining doses. and at 12, 18 and 24 hours following the last dose.  
-
-The two compartment pharmacokinetic model describes how the drug circulates in the individual's body, until it is cleared out (Figure~\ref{fig:twocpt}).
-The drug is orally administered and enters the system through the gut.
-Once the drug is introduced in the system, the \textit{natural evolution} of the system is described by a system of ODEs.
-In the case of a two compartment model with a first-order absorption from the gut, the system is the following:
+remaining doses. and at 12, 18 and 24 hours following the last dose.
+Let's analyze that data using a linear 2 compartment model with first
+order absorption, i.e., 
 %
 \begin{subequations}
 \begin{eqnarray*}
@@ -30,24 +27,14 @@ In the case of a two compartment model with a first-order absorption from the gu
 with
 \begin{itemize}
   \setlength\itemsep{0em}
-  \item $y(t)$: the drug mass in each compartment (mg),
-  \item $k_a$: the rate constant at which the drug flows from the gut to the central compartment (h$^{-1}$),
-  \item $Q$: the clearance at which the drug flows back and forth between the central and the peripheral compartment (L/h),
-  \item $CL$: the clearance at which the drug is cleared from the central compartment (L / h),
-  \item $V_\mathrm{cent}$: the volume of the central compartment (L),
-  \item $V_\mathrm{peri}$: the volume of the peripheral compartment (L).
+  \item $y(t)$: drug mass in each compartment (mg),
+  \item $k_a$: absorption rate constant (h$^{-1}$),
+  \item $CL$: elimination clearance from the central compartment (L / h),
+  \item $Q$: intercompartmental clearance (L/h),
+  \item $V_\mathrm{cent}$: volume of the central compartment (L),
+  \item $V_\mathrm{peri}$: volume of the peripheral compartment (L).
 \end{itemize}
 
-\begin{figure}
-  \begin{center}
-  \includegraphics[width=5in]{../figures/TwoCptNice.png}
-  \caption{Two compartment model with first-order absorption from the gut.}
-  \label{fig:twocpt}
-  \end{center}
-\end{figure}
-
-During the trial, the patient receives a dose of 1,200 mg every 12 hours, until they have received a total of 14 doses.
-Measurements are taken shortly after the first, second, and last doses, and at regular intervals during the treatment.
 Both intervention and measurement events are described by the event schedule, which follows the convention established by NONMEM.
 This means the user must provide for each event the following variables: \texttt{cmt}, \texttt{evid}, \texttt{addl}, \texttt{ss}, \texttt{amt}, \texttt{time}, \texttt{rate}, and \texttt{ii}.
 Table~\ref{tab:event_schedule} provides an overview of the roll of each variable and more details can be found in the \textit{Torsten User Manual}.
@@ -82,7 +69,9 @@ We model this residual error using a lognormal distribution, that is
   y \mid \hat c, \sigma \sim \mathrm{logNormal}(\log \hat c, \sigma^2),
 \end{equation*}
 where $\sigma$ is a scale parameter we wish to estimate.
-The deterministic computation of $\hat c$ along with the measurement model, defines our likelihood function $p(y \mid \theta, x)$, where $\theta = \{ k_a, Q, CL, V_\mathrm{cent}, V_\mathrm{peri}, \sigma \}$.
+The deterministic computation of $\hat c$ along with the measurement
+model, defines our likelihood function $p(y \mid \theta, x)$, where
+$\theta = \{ k_a, CL, Q, V_\mathrm{cent}, V_\mathrm{peri}, \sigma \}$.
 
 It remains to define a prior distribution, $p(\theta)$.
 Our prior should allocate probability mass to every plausible parameter value and exclude patently absurd values.
@@ -187,7 +176,7 @@ Note that for the likelihood, we only use the concentration during observation e
 \subsubsection{Transformed data and transformed parameters block} \label{sec:twocpt_transformed_parameters}
 
 In \texttt{transformed data}, we can construct variables which only depend on the data.
-For this model, we simply specify the number of compartments in our model (including the gut), \texttt{nCmt}, and the numbers of physiological parameters, \texttt{nTheta}, two variables which will come in handy shortly.
+For this model, we simply specify the number of compartments in our model (including the gut), \texttt{nCmt}, and the numbers of pharmacokinetic parameters, \texttt{nTheta}, two variables which will come in handy shortly.
 \begin{lstlisting}
   transformed data {
     int nCmt = 3;
@@ -206,12 +195,12 @@ matrix<lower = 0>[nCmt, nEvent]
                           cmt, addl, ss, theta);
 \end{lstlisting}
 %
-The first eight arguments define the event schedule and the last argument, \texttt{theta}, is an array containing the physiological parameters, and defined as follows:
+The first eight arguments define the event schedule and the last argument, \texttt{theta}, is an array containing the pharmacokinetic parameters, and defined as follows:
 \begin{lstlisting}
 real theta[nTheta] = {CL, Q, VC, VP, ka};
 \end{lstlisting}
 %
-It is also possible to have \texttt{theta} change between events, and specify lag times and bio-availibilities fractions, although we will not take advantage of these features in the example at hand.
+It is also possible to have \texttt{theta} change between events, and specify lag times and bioavailability fractions, although we will not take advantage of these features in the example at hand.
 
 The Torsten function we have chosen to use solves the ODEs analytically.
 Other routines use a matrix exponential, a numerical solver, or a combination of analytical and numerical methods \cite{Margossian:2017}.
@@ -436,7 +425,7 @@ Here, no prediction is made.
 We however examine how consistent an ``unobserved'' data point is with our fitted model.
 Computing this estimator is expensive, since it requires fitting the model to $n$ different training sets in order to evaluate each term in the sum.
 
-\citet{Vehtari:2016} propose an estimator of $\mathrm{elp}_\mathrm{loo}$, which uses Pareto smooth importance sampling and only requires a single model fit.
+Vehtari et al 2016 \citet{Vehtari:2016} propose an estimator of $\mathrm{elp}_\mathrm{loo}$, which uses Pareto smooth importance sampling and only requires a single model fit.
 The premise is to compute
 \begin{equation*}
   \log p(y_i \mid y)
