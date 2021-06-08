@@ -108,7 +108,20 @@ print(fit$time(), digits = 3)
 
 pars = c("lp__", "CL_pop", "Q_pop", "VC_pop", "VP_pop",
          "ka_pop", "sigma")
-fit$summary(c(pars, "omega"))
+ptable <- fit$summary(c(pars, "omega")) %>%
+  mutate_if(is.numeric, ~formatC(., 3)) %>% 
+  rename(parameter = variable) %>%
+  mutate("90% CI" = paste("(", q5, ", ", q95, ")", 
+                          sep = "")) %>%
+  select(parameter, mean, median, sd, mad, "90% CI", ess_bulk, ess_tail, rhat)
+ptable
+write.csv(ptable, file = file.path("deliv", paste0(model_name, 
+                                                 "ParameterTable.csv")))
+
+## open graphics device
+pdf(file = file.path("deliv", paste0(model_name,"Plots%03d.pdf")),
+    width = 8, height = 4, onefile = FALSE)
+
 bayesplot::mcmc_trace(fit$draws(pars))
 bayesplot::mcmc_trace(fit$draws("omega"))
 bayesplot::mcmc_dens_overlay(fit$draws(pars))
@@ -116,10 +129,6 @@ bayesplot::mcmc_dens_overlay(fit$draws("omega"))
 
 ##########################################################################
 ## Posterior predictive checks
-
-## open graphics device
-pdf(file = file.path("deliv", paste0(model_name,"Plots%03d.pdf")),
-    width = 8, height = 4, onefile = FALSE)
 
 yrep <- as_draws_matrix(fit$draws(variables = c("concentrationObsPred")))
 
@@ -154,7 +163,7 @@ predPop <- posterior::as_draws_df(fit$draws("cObsNewPred")) %>%
 
 predAll <- bind_cols(data1[iObs,], predInd, predPop)
 
-ppc1 <- ggplot(predAll, 
+ppc1 <- ggplot(predAll %>% filter(id <= 10), 
                    aes(x = time, y = cObs)) +
   geom_line(aes(x = time, y = medianPop, 
                 color = "population")) +
@@ -171,8 +180,8 @@ ppc1 <- ggplot(predAll,
                      palette = "Set1") +
   scale_fill_brewer(name  ="prediction",
                     breaks=c("individual", "population"),
-                    palette = "Set1")
-ppc1 + geom_point(na.rm = TRUE) +
+                    palette = "Set1") +
+  geom_point(na.rm = TRUE, size = 0.5) +
   scale_y_log10() +
   labs(x = "time (h)",
        y = "plasma drug concentration") +
@@ -181,6 +190,37 @@ ppc1 + geom_point(na.rm = TRUE) +
         legend.position = "bottom",
         strip.text = element_text(size = 8)) +
   facet_wrap(~ id)
+
+ppc2 <- ggplot(predAll %>% filter(id >= 11), 
+               aes(x = time, y = cObs)) +
+  geom_line(aes(x = time, y = medianPop, 
+                color = "population")) +
+  geom_ribbon(aes(ymin = lbPop, ymax = ubPop, 
+                  fill = "population"), 
+              alpha = 0.25) +
+  geom_line(aes(x = time, y = medianInd, 
+                color = "individual")) +
+  geom_ribbon(aes(ymin = lbInd, ymax = ubInd, 
+                  fill = "individual"), 
+              alpha = 0.25) +
+  scale_color_brewer(name  ="prediction",
+                     breaks=c("individual", "population"),
+                     palette = "Set1") +
+  scale_fill_brewer(name  ="prediction",
+                    breaks=c("individual", "population"),
+                    palette = "Set1") +
+  geom_point(na.rm = TRUE, size = 0.5) +
+  scale_y_log10() +
+  labs(x = "time (h)",
+       y = "plasma drug concentration") +
+  theme(text = element_text(size = 12),
+        axis.text = element_text(size = 12),
+        legend.position = "bottom",
+        strip.text = element_text(size = 8)) +
+  facet_wrap(~ id)
+
+ppc1
+ppc2
 
 nPost <- fit$metadata()$iter_sampling / fit$metadata()$thin
 
@@ -209,11 +249,13 @@ vpcPlot <- vpc(sim = predPop %>% filter(!is.na(cObs)),
                  sim_median_fill = "blue",
                  sim_median_alpha = 0.25)))
 
-vpcPlot + geom_point(data = data1, aes(x = time, y = cObs), alpha = 0.1) +
+vpcPlot <- vpcPlot + geom_point(data = data1, aes(x = time, y = cObs), alpha = 0.1) +
   scale_y_log10() +
   labs(x = "time (h)",
        y = "plasma drug concentration") +
   theme(text = element_text(size = 12),
         axis.text = element_text(size = 12))
+
+vpcPlot
 
 dev.off()

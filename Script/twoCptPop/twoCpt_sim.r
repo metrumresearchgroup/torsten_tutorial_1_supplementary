@@ -76,7 +76,7 @@ init <- function () {
   
   list(CL_pop = CL_pop, Q_pop = Q_pop, VC_pop = VC_pop, VP_pop = VP_pop,
        ka_pop = ka_pop, omega = omega,
-       sigma = 0.1)   
+       sigma = 0.15)   
 }
 
 ##########################################################################
