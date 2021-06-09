@@ -4,8 +4,8 @@ The conclusions we draw are based on the posterior distribution which, in all bu
 We can however probe the posterior using a host of techniques such as Markov chains Monte Carlo sampling and approximate Bayesian computation.
 Writing these algorithms is a tedious and error prone endeavor but fortunately modelers can often rely on existing software with efficient implementations.
 
-In the field of pharmacometrics, statistical software such as NONMEM \cite{author:0000} and Monolix \cite{author:0000} support many routines to specify and analyze pharmacokinetic and pharmacodynamic population models.
-There also exist more general probabilistic languages such as, to only name a few, BUGS \cite{author:0000} and more recently Stan \cite{Carpenter:2017}, which will be the focus of this tutorial.
+In the field of pharmacometrics, statistical software such as NONMEM\textsuperscript{\textregistered} \cite{Beal_undated-qu} and Monolix\textsuperscript{\textregistered} \cite{monolix2021} support many routines to specify and analyze pharmacokinetic and pharmacodynamic population models.
+There also exist more general probabilistic languages such as, to only name a few, BUGS \cite{lunn2009bugs} and more recently Stan \cite{Carpenter:2017}, which will be the focus of this tutorial.
 Stan supports a rich library of probability densities, mathematical functions including matrix operations and numerical solvers for differential equations.
 These features make for a rich and flexible language, however writing common pharmacometrics models can be tedious.
 Torsten extends Stan by providing a suite of functions to facilitate the specification of pharmacometrics models.
@@ -118,7 +118,7 @@ The R and Stan code for all the examples are available at \url{link}.
  Our aim is to provide a self-contained discussion, while trying to remain concise. 
 The objectives of this tutorial are to describe basic model implementation and execution using Stan and Torsten and subsequent analysis of the results to generate MCMC diagnostics and limited model checking. Thus we illustrate key elements of a Bayesian workflow, but do not present complete Bayesian workflows for each example due to space limitations.
  We assume the reader is familiar with compartment models as they arise in pharmacokinetic and pharmacodynamic models, and has experience with data that describe a clinical event schedule.
- For the latter, we follow the convention established by NONMEM/NMTRAN/PREDPP.
+ For the latter, we follow the convention established by NONMEM\textsuperscript{\textregistered}/NMTRAN\textsuperscript{\textregistered}/PREDPP\textsuperscript{\textregistered}.
  Exposure to Bayesian statistics and inference algorithms is desirable, in particular an elementary understanding of standard MCMC methods.
  We expect the reader to know R but we don't assume any background in Stan.
  

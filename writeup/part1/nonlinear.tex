@@ -1,14 +1,15 @@
 
-As a starting example, we consider a compartment pharmacokinetic model for a single patient.
+As a starting example, we consider analysis of PK and PD data from a
+single patient using a PKPD model described in terms of a nonlinear ODE
+system that requires the use of a numerical solver.
 The patient receives multiple doses at regular time intervals and the drug plasma concentration is recorded over time.
-Our goal is to infer the physiological parameters of the patient, pertinent to the drug's pharmacokinetics, and the measurement error.
 
 \subsection{Nonlinear pharmacokinetic / pharmacodynamic model} 
 For the last example, let us go back to the single patient
 two-compartment model and append it with a PD
 model. Specifically, we examine the
 Friberg-Karlsson semi-mechanistic model for drug-induced
-myelosuppression [27, 28, 29, 30, 31, 14] with the goal to model the
+myelosuppression \cite{3181,2364,2518,3187,3188,3537} with the goal to model the
 relation between neutrophil counts and drug exposure.
 It describes a delayed feedback mechanism that keeps the absolute neutrophil count (ANC) at the
 baseline ($\text{Circ}_0$) in a circulatory compartment ($y_{\text{circ}}$), as well as the drug
@@ -69,8 +70,8 @@ few items. It often helps to keep an index array that points to the
 observations in the ODE solutions, such as
 \lstinputlisting[firstline=50,lastline=51]{../../Script/neutropenia-single-patient/neutropeniaSinglePatient1.stan}
 which are the indices to the the drug concentration and neutrophils
-count observations, respectively. Despite Stan/Torsten provides
-default values, we highly recommend user define the ODE
+count observations, respectively. Though Stan/Torsten provides
+default values, we highly recommend that the user define the ODE
 solver control parameters in the \texttt{data} block
 \lstinputlisting[firstline=70,lastline=72]{../../Script/neutropenia-single-patient/neutropeniaSinglePatient1.stan}
 and judiciously choose these control parameters
